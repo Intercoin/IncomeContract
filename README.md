@@ -71,7 +71,6 @@ recipient|address|recipient's address
 Returned params:
 name  | type | description
 --|--|--
-
 maximum|uint256|maximum funds that was setup by owner
 payed|uint256|already paid funds. mean that recipient already claimed them
 locked|uint256|fudns that restricted by owner
@@ -84,6 +83,7 @@ Create IncomeContract with param 'token' = <0x0000000000000000000000000000000000
     * add manager to recipient by invoking method `addManager(<recipient address>,<manager address>)`
     * setup restriction. invoke method `setLockup(<recipient address>, <array or restriction's tuples>)`. one tuple is [amount,untilTime,gradual].
 So it will be smth like this 
+```
 [
 [<10e18>,<time_now + 1week in seconds>, false],
 [<10e18>,<time_now + 2week in seconds>, false],
@@ -94,5 +94,6 @@ So it will be smth like this
 [<10e18>,<time_now + 7week in seconds>, false],
 [<10e18>,<time_now + 8week in seconds>, false]
 ]
+```
     * after this, every week will be available by 10 eth and manager can pay (setup allowed amount to claim) to recipient any funds of available. 
     * after passing 2 weeks. available by owner 20eth. manager can `pay` not more that 20eth. for example he invoking method `pay(<recipient address>,<12e18>)`.  reciepient can claim only 12 eth
