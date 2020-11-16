@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 pragma solidity >=0.6.0 <0.7.0;
 pragma experimental ABIEncoderV2;
 
@@ -53,6 +54,9 @@ contract IncomeContract is Ownable, ReentrancyGuard {
     mapping(address => Recipient) recipients;
     address tokenAddr;
     
+    /**
+     * 
+     */
     constructor(
         address token // can be address(0) = 0x0000000000000000000000000000000000000000   mean   ETH
     )
