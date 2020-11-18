@@ -22,12 +22,12 @@ contract IncomeContractUBI is IUBI, DateTime, IncomeContract {
     string private communityRole;
     string private communityUBIRole;
     
-    int256 constant sampleSize = 10;
-    int256 constant multiplier = 1e6;
+    uint256 constant sampleSize = 10;
+    uint256 constant multiplier = 1e6;
     
+    using SafeMath for uint256;
     using SignedSafeMath for uint256;
     using SignedSafeMath for int256;
-    using SafeMath for uint256;
     
     
     uint256 private startDateIndex;
@@ -100,6 +100,9 @@ contract IncomeContractUBI is IUBI, DateTime, IncomeContract {
         startDateIndex = getCurrentDateIndex();
     }
     
+    function getRatioMultiplier() public view returns(uint256) {
+        return multiplier;
+    }
     // calling by voting
     function setRatio(
         bytes32 tag, 
@@ -165,13 +168,57 @@ contract IncomeContractUBI is IUBI, DateTime, IncomeContract {
         }
         setUBI(dateIndex);
     }
-    
+
     function checkUBI(
+    ) 
+        public 
+        view
+        override 
+        returns(uint256 ubi) 
+    {
+        uint256 lastIndex = users[msg.sender].lastIndex;
+        uint256 payed = users[msg.sender].payed;
+        uint256 total = users[msg.sender].total;
+        uint256 prevUBI = users[msg.sender].prevUBI;
+        
+        if (users[msg.sender].exists == false) {
+            lastIndex = startDateIndex;
+        }
+       
+        uint256 untilIndex = getCurrentDateIndex(); //.add(DAY_IN_SECONDS);
+        for (uint256 i=lastIndex; i<untilIndex; i=i+DAY_IN_SECONDS) {
+            if (UBIValues[i] == 0) {
+            } else {
+               prevUBI = UBIValues[i];
+            }
+            total = total.add(prevUBI);
+            lastIndex = i.add(DAY_IN_SECONDS);
+            
+        }
+        ubi =  (total.sub(payed)).div(multiplier);
+
+    }
+    
+    function claimUBI(
     ) 
         public 
         override 
         canObtainUBI()
-        returns(uint256) 
+    {
+        _actualizeUBI();
+        uint256 toPay = users[msg.sender].total.sub(users[msg.sender].payed);
+        require(toPay.div(multiplier) > 0, 'Amount exceeds balance available to claim');
+        users[msg.sender].payed = users[msg.sender].payed.add(toPay);
+        bool success = _claim(msg.sender, toPay.div(multiplier));
+        require(success == true, 'There are no enough funds at contract');
+        
+    }
+    
+    function _actualizeUBI(
+    ) 
+        internal 
+        
+        returns(uint256 ubi) 
     {
         if (users[msg.sender].exists == false) {
             users[msg.sender].lastIndex = startDateIndex;
@@ -182,7 +229,7 @@ contract IncomeContractUBI is IUBI, DateTime, IncomeContract {
         }
         
         uint256 untilIndex = getCurrentDateIndex(); //.add(DAY_IN_SECONDS);
-        for (uint256 i=users[msg.sender].lastIndex; i<untilIndex; i+DAY_IN_SECONDS) {
+        for (uint256 i=users[msg.sender].lastIndex; i<untilIndex; i=i+DAY_IN_SECONDS) {
             if (UBIValues[i] == 0) {
             } else {
                 users[msg.sender].prevUBI = UBIValues[i];
@@ -191,21 +238,8 @@ contract IncomeContractUBI is IUBI, DateTime, IncomeContract {
             users[msg.sender].lastIndex = i.add(DAY_IN_SECONDS);
             
         }
-    }
-    
-    function claimUBI(
-    ) 
-        public 
-        override 
-        canObtainUBI()
-    {
-        checkUBI();
-        uint256 toPay = users[msg.sender].total.sub(users[msg.sender].payed);
-        
-        users[msg.sender].payed = users[msg.sender].payed.add(toPay);
-        bool success = _claim(msg.sender, toPay);
-        require(success == true, 'There are no enough funds at contract');
-        
+        ubi =  (users[msg.sender].total.sub(users[msg.sender].payed)).div(multiplier);
+
     }
     
     function _canRecord(string memory roleName) private view returns(bool s){
@@ -229,9 +263,9 @@ contract IncomeContractUBI is IUBI, DateTime, IncomeContract {
         uint256 ubi;
         for (uint256 i=0; i< tagsIndex; i++) {
             ubi = ubi.add(
-                uint256(
-                    ratiosData[_tagsIndices[i]].average.div(multiplier)
-                ).mul(avgPrices[_tagsIndices[i]][dateIndex])
+                multiplier.mul(
+                    uint256(ratiosData[_tagsIndices[i]].average).mul(avgPrices[_tagsIndices[i]][dateIndex]).div(multiplier)
+                ).div(multiplier)
             );
             
         }
@@ -256,13 +290,14 @@ contract IncomeContractUBI is IUBI, DateTime, IncomeContract {
     ) 
         private 
     {
-        ratio = ratio.mul(multiplier);
+        ratio = ratio.mul(int256(multiplier));
         
         ratiosData[tagBytes32].total = ratiosData[tagBytes32].total.add(ratio);
         
         if (ratiosData[tagBytes32].alreadyInit == false) {
             ratiosData[tagBytes32].alreadyInit = true;
             ratiosData[tagBytes32].count = 1;
+            ratiosData[tagBytes32].average = ratio;
             ratiosData[tagBytes32].prevRatio = ratio;
         } else {
             ratiosData[tagBytes32].count = ratiosData[tagBytes32].count.add(1);
@@ -277,7 +312,7 @@ contract IncomeContractUBI is IUBI, DateTime, IncomeContract {
                 (
                     (
                         (int256(ratio)).sub(ratiosData[tagBytes32].average)
-                    ).div(sampleSize)
+                    ).div(int256(sampleSize))
                 )
             );
             

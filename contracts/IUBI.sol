@@ -8,7 +8,7 @@ interface IUBI {
     function setAvgPrice(bytes32 tag, uint256 price) external;
     function setAvgPrice(bytes32[] calldata tags, uint256[] calldata prices) external;
     
-    function checkUBI() external returns(uint256);
+    function checkUBI() external view returns(uint256);
     function claimUBI() external;
 
 }

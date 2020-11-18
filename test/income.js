@@ -466,4 +466,5 @@ contract('IncomeContract', (accounts) => {
         );
         
     });
+    
 });
