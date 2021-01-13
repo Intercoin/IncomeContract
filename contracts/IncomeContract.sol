@@ -2,16 +2,16 @@
 pragma solidity >=0.6.0 <0.7.0;
 pragma experimental ABIEncoderV2;
 
-//import "./openzeppelin-contracts/contracts/math/SignedSafeMath.sol";
-import "./openzeppelin-contracts/contracts/math/SafeMath.sol";
-import "./openzeppelin-contracts/contracts/utils/EnumerableSet.sol";
-import "./openzeppelin-contracts/contracts/access/Ownable.sol";
-// import "./lib/StringUtils.sol";
-import "./openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
-import "./openzeppelin-contracts/contracts/utils/Address.sol";
-import "./openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
+import "@openzeppelin/contracts-ethereum-package/contracts/math/SafeMath.sol";
+import "@openzeppelin/contracts-ethereum-package/contracts/utils/EnumerableSet.sol";
+import "@openzeppelin/contracts-ethereum-package/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts-ethereum-package/contracts/utils/Address.sol";
+import "@openzeppelin/contracts-ethereum-package/contracts/utils/ReentrancyGuard.sol";
 
-contract IncomeContract is Ownable, ReentrancyGuard {
+import "./IntercoinTrait.sol";
+
+contract IncomeContract is Initializable, OwnableUpgradeSafe, ReentrancyGuardUpgradeSafe, IntercoinTrait {
     using SafeMath for uint256;
     using EnumerableSet for EnumerableSet.AddressSet;
     
@@ -54,14 +54,16 @@ contract IncomeContract is Ownable, ReentrancyGuard {
     mapping(address => Recipient) recipients;
     address tokenAddr;
     
-    /**
-     * 
-     */
-    constructor(
+    function __IncomeContract_init(
         address token // can be address(0) = 0x0000000000000000000000000000000000000000   mean   ETH
-    )
-        public
+    ) 
+        public 
+        initializer 
     {
+        __Ownable_init();
+        __ReentrancyGuard_init();
+        __IntercoinTrait_init();
+        
         tokenAddr = token;
     }
     

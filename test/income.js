@@ -34,7 +34,8 @@ contract('IncomeContract', (accounts) => {
    
     it('tests simple lifecycle (ETH)', async () => {
         
-        var incomeContractMockInstance = await IncomeContractMock.new(zeroAddress, {from: accountTen});
+        var incomeContractMockInstance = await IncomeContractMock.new({from: accountTen});
+        await incomeContractMockInstance.__IncomeContract_init(zeroAddress, {from: accountTen});
         
         await truffleAssert.reverts(
             incomeContractMockInstance.addRecipient(accountOne),
@@ -218,7 +219,8 @@ contract('IncomeContract', (accounts) => {
         
         var ERC20MintableTokenInstance = await ERC20MintableToken.new('t2','t2', {from: accountTen});
         
-        var incomeContractMockInstance = await IncomeContractMock.new(ERC20MintableTokenInstance.address, {from: accountTen});
+        var incomeContractMockInstance = await IncomeContractMock.new({from: accountTen});
+        await incomeContractMockInstance.__IncomeContract_init(ERC20MintableTokenInstance.address, {from: accountTen});
         
         await truffleAssert.reverts(
             incomeContractMockInstance.addRecipient(accountOne),
@@ -391,7 +393,9 @@ contract('IncomeContract', (accounts) => {
     
     it('test error enough funds. adding and clamin afterwards ', async () => {
         var ERC20MintableTokenInstance = await ERC20MintableToken.new('t2','t2', {from: accountTen});
-        var incomeContractMockInstance = await IncomeContractMock.new(ERC20MintableTokenInstance.address, {from: accountTen});
+        var incomeContractMockInstance = await IncomeContractMock.new({from: accountTen});
+        await incomeContractMockInstance.__IncomeContract_init(ERC20MintableTokenInstance.address, {from: accountTen});
+        
         await incomeContractMockInstance.addRecipient(accountOne, {from: accountTen});
         await incomeContractMockInstance.addRecipient(accountTwo, {from: accountTen});
         await ERC20MintableTokenInstance.mint(incomeContractMockInstance.address, '0x'+(10*oneEther).toString(16), { from: accountTen});

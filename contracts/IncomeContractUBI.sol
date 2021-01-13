@@ -2,13 +2,10 @@
 pragma solidity >=0.6.0 <0.7.0;
 pragma experimental ABIEncoderV2;
 
-import "./openzeppelin-contracts/contracts/math/SignedSafeMath.sol";
-import "./openzeppelin-contracts/contracts/math/SafeMath.sol";
-import "./openzeppelin-contracts/contracts/utils/EnumerableSet.sol";
-// import "./openzeppelin-contracts/contracts/access/Ownable.sol";
-// import "./lib/StringUtils.sol";
-// import "./openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
-// import "./openzeppelin-contracts/contracts/utils/Address.sol";
+import "@openzeppelin/contracts-ethereum-package/contracts/math/SignedSafeMath.sol";
+import "@openzeppelin/contracts-ethereum-package/contracts/math/SafeMath.sol";
+import "@openzeppelin/contracts-ethereum-package/contracts/utils/EnumerableSet.sol";
+
 import "./DateTime.sol";
 
 import "./IUBI.sol";
@@ -78,21 +75,23 @@ contract IncomeContractUBI is IUBI, DateTime, IncomeContract {
         _;
     }
    
-    
     /**
+     * @param token  token address of eth
      * @param community address of community contract
      * @param roleName role of contracts who can send stats of prices and ratios
      * @param ubiRoleName role of EOA which can obtain ubi
      */
-    constructor(
+    function __IncomeContractUBI_init(
         address token, // can be address(0) = 0x0000000000000000000000000000000000000000   mean   ETH
         ICommunity community,
         string memory roleName,
         string memory ubiRoleName
-    )
-        public
-        IncomeContract(token)
+    )  
+        public 
+        initializer 
     {
+        __IncomeContract_init(token);
+
         communityAddress = community;
         communityRole = roleName;
         communityUBIRole = ubiRoleName;

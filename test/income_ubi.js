@@ -40,7 +40,8 @@ contract('IncomeContractUBI', (accounts) => {
     
     it('tests simple lifecycle (ETH)', async () => {
         var CommunityMockInstance = await CommunityMock.new({from: accountTen});
-        var IncomeContractUBIMockInstance = await IncomeContractUBIMock.new(zeroAddress, CommunityMockInstance.address, membersRole, ubiRole, {from: accountTen});
+        var IncomeContractUBIMockInstance = await IncomeContractUBIMock.new({from: accountTen, gas: 6500000});
+        await IncomeContractUBIMockInstance.__IncomeContractUBI_init(zeroAddress, CommunityMockInstance.address, membersRole, ubiRole, {from: accountTen});
         
         await truffleAssert.reverts(
             IncomeContractUBIMockInstance.addRecipient(accountOne),
@@ -224,7 +225,8 @@ contract('IncomeContractUBI', (accounts) => {
         var CommunityMockInstance = await CommunityMock.new({from: accountTen});
         var ERC20MintableTokenInstance = await ERC20MintableToken.new('t2','t2', {from: accountTen});
         
-        var IncomeContractUBIMockInstance = await IncomeContractUBIMock.new(ERC20MintableTokenInstance.address,  CommunityMockInstance.address, membersRole, ubiRole, {from: accountTen});
+        var IncomeContractUBIMockInstance = await IncomeContractUBIMock.new({from: accountTen, gas: 6500000});
+        await IncomeContractUBIMockInstance.__IncomeContractUBI_init(ERC20MintableTokenInstance.address, CommunityMockInstance.address, membersRole, ubiRole, {from: accountTen});
         
         await truffleAssert.reverts(
             IncomeContractUBIMockInstance.addRecipient(accountOne),
@@ -398,7 +400,8 @@ contract('IncomeContractUBI', (accounts) => {
     it('test error enough funds. adding and clamin afterwards ', async () => {
         var CommunityMockInstance = await CommunityMock.new({from: accountTen});
         var ERC20MintableTokenInstance = await ERC20MintableToken.new('t2','t2', {from: accountTen});
-        var IncomeContractUBIMockInstance = await IncomeContractUBIMock.new(ERC20MintableTokenInstance.address,  CommunityMockInstance.address, membersRole, ubiRole, {from: accountTen});
+        var IncomeContractUBIMockInstance = await IncomeContractUBIMock.new({from: accountTen, gas: 6500000});
+        await IncomeContractUBIMockInstance.__IncomeContractUBI_init(ERC20MintableTokenInstance.address, CommunityMockInstance.address, membersRole, ubiRole, {from: accountTen});
         await IncomeContractUBIMockInstance.addRecipient(accountOne, {from: accountTen});
         await IncomeContractUBIMockInstance.addRecipient(accountTwo, {from: accountTen});
         await ERC20MintableTokenInstance.mint(IncomeContractUBIMockInstance.address, '0x'+(10*oneEther).toString(16), { from: accountTen});
@@ -479,7 +482,9 @@ contract('IncomeContractUBI', (accounts) => {
         
         var CommunityMockInstance = await CommunityMock.new({from: accountTen});
         var ERC20MintableTokenInstance = await ERC20MintableToken.new('t2','t2', {from: accountTen});
-        var IncomeContractUBIMockInstance = await IncomeContractUBIMock.new(ERC20MintableTokenInstance.address,  CommunityMockInstance.address, membersRole, ubiRole, {from: accountTen, gas: 6000000});
+        //var IncomeContractUBIMockInstance = await IncomeContractUBIMock.new(ERC20MintableTokenInstance.address,  CommunityMockInstance.address, membersRole, ubiRole, {from: accountTen, gas: 6000000});
+        var IncomeContractUBIMockInstance = await IncomeContractUBIMock.new({from: accountTen, gas: 6500000});
+        await IncomeContractUBIMockInstance.__IncomeContractUBI_init(ERC20MintableTokenInstance.address, CommunityMockInstance.address, membersRole, ubiRole, {from: accountTen});
         await ERC20MintableTokenInstance.mint(IncomeContractUBIMockInstance.address, '0x'+(100*oneToken).toString(16), { from: accountTen});
         
         var SomeExternalContractMockInstance = await SomeExternalContractMock.new(IncomeContractUBIMockInstance.address, {from: accountTen});

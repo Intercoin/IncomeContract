@@ -1,8 +1,13 @@
 # IncomeContract
 Implements UBI and other types of income, used to claim currency in other external contracts
 
+# Installation
+### Node
+`npm install @openzeppelin/contracts-ethereum-package`
+
 # Deploy
-when deploy it is need to pass parameters in to constructor<br/>
+when deploy it is need to pass parameters in to init method <br/>
+
 Params:
 name  | type | description
 --|--|--
