@@ -10,15 +10,7 @@ contract IntercoinTrait is Initializable, IIntercoinTrait {
     
     address private intercoinAddr;
     bool private isSetup;
-    
-    function __IntercoinTrait_init(
-    ) 
-        internal 
-        initializer 
-    {
-        intercoinAddr = address(0);
-        isSetup = false;
-    }
+
     /**
      * setup intercoin contract's address. happens once while initialization through factory
      * @param addr address of intercoin contract

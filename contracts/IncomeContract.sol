@@ -62,7 +62,6 @@ contract IncomeContract is Initializable, OwnableUpgradeSafe, ReentrancyGuardUpg
     {
         __Ownable_init();
         __ReentrancyGuard_init();
-        __IntercoinTrait_init();
         
         tokenAddr = token;
     }
