@@ -1,7 +1,8 @@
-pragma solidity >=0.6.0 <0.7.0;
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
 pragma experimental ABIEncoderV2;
 
-import "../IUBI.sol";
+import "../interfaces/IUBI.sol";
 import "../lib/StringUtils.sol";
 
 contract SomeExternalContractMock {
@@ -12,7 +13,6 @@ contract SomeExternalContractMock {
     constructor(
         IUBI addr
     )
-        public
     {
         addrContract = addr;
     }

@@ -1,18 +1,19 @@
-pragma solidity >=0.6.0 <0.7.0;
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
 pragma experimental ABIEncoderV2;
 
 
-import "@openzeppelin/contracts-ethereum-package/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts-ethereum-package/contracts/utils/ReentrancyGuard.sol";
-import "../ICommunity.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+import "../interfaces/ICommunity.sol";
 
-contract CommunityMock is OwnableUpgradeSafe, ReentrancyGuardUpgradeSafe, ICommunity {
+contract CommunityMock is OwnableUpgradeable, ReentrancyGuardUpgradeable, ICommunity {
     uint256 count = 5;
     
     function memberCount(string memory role) public override view returns(uint256) {
         return count;
     }
-    function setMemberCount(uint256 _count) public returns(uint256) {
+    function setMemberCount(uint256 _count) public {
         count = _count;
     }
     

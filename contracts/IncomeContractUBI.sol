@@ -1,19 +1,19 @@
 // SPDX-License-Identifier: MIT
-pragma solidity >=0.6.0 <0.7.0;
+pragma solidity ^0.8.0;
 pragma experimental ABIEncoderV2;
 
-import "@openzeppelin/contracts-ethereum-package/contracts/math/SignedSafeMath.sol";
-import "@openzeppelin/contracts-ethereum-package/contracts/math/SafeMath.sol";
-import "@openzeppelin/contracts-ethereum-package/contracts/utils/EnumerableSet.sol";
+import "@openzeppelin/contracts-upgradeable/utils/math/SignedSafeMathUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/structs/EnumerableSetUpgradeable.sol";
 
-import "./DateTime.sol";
+import "./lib/DateTime.sol";
 
-import "./IUBI.sol";
-import "./ICommunity.sol";
+import "./interfaces/IUBI.sol";
+import "./interfaces/ICommunity.sol";
 
 import "./IncomeContract.sol";
 
-contract IncomeContractUBI is IUBI, DateTime, IncomeContract {
+contract IncomeContractUBI is IUBI, IncomeContract {
     
     ICommunity private communityAddress;
     string private communityRole;
@@ -22,10 +22,10 @@ contract IncomeContractUBI is IUBI, DateTime, IncomeContract {
     uint256 constant sampleSize = 10;
     uint256 constant multiplier = 1e6;
     
-    using SafeMath for uint256;
-    using SignedSafeMath for uint256;
-    using SignedSafeMath for int256;
-    
+    using SafeMathUpgradeable for uint256;
+    using SignedSafeMathUpgradeable for uint256;
+    using SignedSafeMathUpgradeable for int256;
+    using DateTime for uint256;
     
     uint256 private startDateIndex;
     
@@ -99,7 +99,7 @@ contract IncomeContractUBI is IUBI, DateTime, IncomeContract {
         startDateIndex = getCurrentDateIndex();
     }
     
-    function getRatioMultiplier() public view returns(uint256) {
+    function getRatioMultiplier() public pure returns(uint256) {
         return multiplier;
     }
     // calling by voting
@@ -185,13 +185,13 @@ contract IncomeContractUBI is IUBI, DateTime, IncomeContract {
         }
        
         uint256 untilIndex = getCurrentDateIndex(); //.add(DAY_IN_SECONDS);
-        for (uint256 i=lastIndex; i<untilIndex; i=i+DAY_IN_SECONDS) {
+        for (uint256 i=lastIndex; i<untilIndex; i=i+DateTime.DAY_IN_SECONDS) {
             if (UBIValues[i] == 0) {
             } else {
                prevUBI = UBIValues[i];
             }
             total = total.add(prevUBI);
-            lastIndex = i.add(DAY_IN_SECONDS);
+            lastIndex = i.add(DateTime.DAY_IN_SECONDS);
             
         }
         ubi =  (total.sub(payed)).div(multiplier);
@@ -228,13 +228,13 @@ contract IncomeContractUBI is IUBI, DateTime, IncomeContract {
         }
         
         uint256 untilIndex = getCurrentDateIndex(); //.add(DAY_IN_SECONDS);
-        for (uint256 i=users[msg.sender].lastIndex; i<untilIndex; i=i+DAY_IN_SECONDS) {
+        for (uint256 i=users[msg.sender].lastIndex; i<untilIndex; i=i+DateTime.DAY_IN_SECONDS) {
             if (UBIValues[i] == 0) {
             } else {
                 users[msg.sender].prevUBI = UBIValues[i];
             }
             users[msg.sender].total = users[msg.sender].total.add(users[msg.sender].prevUBI);
-            users[msg.sender].lastIndex = i.add(DAY_IN_SECONDS);
+            users[msg.sender].lastIndex = i.add(DateTime.DAY_IN_SECONDS);
             
         }
         ubi =  (users[msg.sender].total.sub(users[msg.sender].payed)).div(multiplier);
@@ -277,10 +277,10 @@ contract IncomeContractUBI is IUBI, DateTime, IncomeContract {
         view 
         returns(uint256 dateIndex) 
     {
-        uint256 y = getYear(now);
-        uint256 m = getMonth(now);
-        uint256 d = getDay(now);
-        dateIndex = toTimestamp(uint256(y),uint256(m),uint256(d));
+        uint256 y = (block.timestamp).getYear();
+        uint256 m = (block.timestamp).getMonth();
+        uint256 d = (block.timestamp).getDay();
+        dateIndex = (uint256(y)).toTimestamp(uint256(m),uint256(d));
     }
     
     function _record(

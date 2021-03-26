@@ -1,8 +1,9 @@
-pragma solidity >=0.6.0 <0.7.0;
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
 pragma experimental ABIEncoderV2;
 
 import "../IncomeContractUBI.sol";
-import "../ICommunity.sol";
+import "../interfaces/ICommunity.sol";
 import "../lib/StringUtils.sol";
 
 contract IncomeContractUBIMock is IncomeContractUBI {

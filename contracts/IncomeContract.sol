@@ -1,19 +1,19 @@
 // SPDX-License-Identifier: MIT
-pragma solidity >=0.6.0 <0.7.0;
+pragma solidity ^0.8.0;
 pragma experimental ABIEncoderV2;
 
-import "@openzeppelin/contracts-ethereum-package/contracts/math/SafeMath.sol";
-import "@openzeppelin/contracts-ethereum-package/contracts/utils/EnumerableSet.sol";
-import "@openzeppelin/contracts-ethereum-package/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts-ethereum-package/contracts/utils/Address.sol";
-import "@openzeppelin/contracts-ethereum-package/contracts/utils/ReentrancyGuard.sol";
+import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/structs/EnumerableSetUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 
 import "./IntercoinTrait.sol";
 
-contract IncomeContract is Initializable, OwnableUpgradeSafe, ReentrancyGuardUpgradeSafe, IntercoinTrait {
-    using SafeMath for uint256;
-    using EnumerableSet for EnumerableSet.AddressSet;
+contract IncomeContract is OwnableUpgradeable, ReentrancyGuardUpgradeable, IntercoinTrait {
+    using SafeMathUpgradeable for uint256;
+    using EnumerableSetUpgradeable for EnumerableSetUpgradeable.AddressSet;
     
     struct Restrict {
         uint256 amount;
@@ -46,7 +46,7 @@ contract IncomeContract is Initializable, OwnableUpgradeSafe, ReentrancyGuardUpg
         uint256 amountAllowedByManager;
         Restrict[] restrictions;
         
-        EnumerableSet.AddressSet managers;
+        EnumerableSetUpgradeable.AddressSet managers;
         
         bool exists;
     }
@@ -117,10 +117,10 @@ contract IncomeContract is Initializable, OwnableUpgradeSafe, ReentrancyGuardUpg
             recipients[recipient].amountMax = recipients[recipient].amountMax.add(restrictions[i].amount);
             
             // adding restriction
-            require(restrictions[i].untilTime > now, 'untilTime must be more than current time');
+            require(restrictions[i].untilTime > block.timestamp, 'untilTime must be more than current time');
             recipients[recipient].restrictions.push(Restrict({
                 amount: restrictions[i].amount,
-                startTime: now,
+                startTime: block.timestamp,
                 untilTime: restrictions[i].untilTime,
                 gradual: restrictions[i].gradual
             }));
@@ -250,7 +250,7 @@ contract IncomeContract is Initializable, OwnableUpgradeSafe, ReentrancyGuardUpg
         if (tokenAddr == address(0)) {
             balance = address(this).balance;
         } else {
-            balance = IERC20(tokenAddr).balanceOf(address(this));
+            balance = IERC20Upgradeable(tokenAddr).balanceOf(address(this));
         }
         if (balance < amount) {
             success = false;
@@ -259,7 +259,7 @@ contract IncomeContract is Initializable, OwnableUpgradeSafe, ReentrancyGuardUpg
                 address payable addr = payable(recipient);
                 success = addr.send(amount);
             } else {
-                success = IERC20(tokenAddr).transfer(recipient, amount);
+                success = IERC20Upgradeable(tokenAddr).transfer(recipient, amount);
             }
         }
     }
@@ -274,11 +274,11 @@ contract IncomeContract is Initializable, OwnableUpgradeSafe, ReentrancyGuardUpg
         locked = 0;
         uint256 fundsPerSecond;
         for (uint256 i = 0; i < restrictions.length; i++ ) {
-            if (restrictions[i].untilTime > now) {
+            if (restrictions[i].untilTime > block.timestamp) {
                 if (restrictions[i].gradual == true) {
                     fundsPerSecond = restrictions[i].amount.div(restrictions[i].untilTime.sub(restrictions[i].startTime));
                     locked = locked.add(
-                        fundsPerSecond.mul(restrictions[i].untilTime.sub(now))
+                        fundsPerSecond.mul(restrictions[i].untilTime.sub(block.timestamp))
                     );
                     
                 } else {
