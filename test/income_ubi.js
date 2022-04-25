@@ -253,7 +253,7 @@ describe("IncomeContractUBI",  async() => {
         );
 
         await ERC20MintableToken.connect(owner).mint(IncomeContractUBIMockInstance.address, TEN.mul(TENIN18));
-        
+       
         let SomeExternalContractMockFactory = await ethers.getContractFactory("SomeExternalContractMock");
 
         var SomeExternalContractMockInstance = await SomeExternalContractMockFactory.connect(owner).deploy(IncomeContractUBIMockInstance.address);
@@ -401,6 +401,5 @@ describe("IncomeContractUBI",  async() => {
         
         
     });
-
       
 });
