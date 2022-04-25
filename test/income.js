@@ -60,7 +60,7 @@ describe("income",  async() => {
     for ( const ETHMode of [true, false]) {
     it("tests simple lifecycle ("+(ETHMode ? "ETH" : "ERC20")+")", async() => {
 
-        await IncomeContractMock.connect(owner).__IncomeContract_init((ETHMode) ? ZERO_ADDRESS : ERC20MintableToken.address);
+        await IncomeContractMock.connect(owner).init((ETHMode) ? ZERO_ADDRESS : ERC20MintableToken.address);
 
         await expect(
             IncomeContractMock.connect(accountFive).addRecipient(accountOne.address)
@@ -218,7 +218,7 @@ describe("income",  async() => {
     
     it('test error enough funds. adding and clamin afterwards ', async () => {
         
-        await IncomeContractMock.connect(owner).__IncomeContract_init(ERC20MintableToken.address);
+        await IncomeContractMock.connect(owner).init(ERC20MintableToken.address);
 
         await IncomeContractMock.connect(owner).addRecipient(accountOne.address);
         await IncomeContractMock.connect(owner).addRecipient(accountTwo.address);

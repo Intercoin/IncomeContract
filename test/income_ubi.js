@@ -28,22 +28,34 @@ const UBIROLE = 'members'
 chai.use(require('chai-bignumber')());
 
 
+var passTime = async(seconds) => {
+    if (typeof(seconds) === 'undefined') {
+        seconds = 1*60*60; // one hour
+    } else {
+        seconds = parseInt(seconds);
+    }
+    // pass last 1 hour
+    await ethers.provider.send('evm_increaseTime', [seconds]);
+    await ethers.provider.send('evm_mine');
+}
 
 describe("IncomeContractUBI",  async() => {
+    const accounts = waffle.provider.getWallets();
 
     // Setup accounts.
-    const accountOne = accounts[0];
-    const accountTwo = accounts[1];  
-    const accountThree = accounts[2];
-    const accountFourth= accounts[3];
-    const accountFive = accounts[4];
-    const accountSix = accounts[5];
-    const accountSeven = accounts[6];
-    const accountEight = accounts[7];
-    const accountNine = accounts[8];
-    const accountTen = accounts[9];
-    const accountEleven = accounts[10];
-    const accountTwelwe = accounts[11];
+    const owner = accounts[0];    
+    const accountOne = accounts[1];
+    const accountTwo = accounts[2];  
+    const accountThree = accounts[3];
+    const accountFourth= accounts[4];
+    const accountFive = accounts[5];
+    const accountSix = accounts[6];
+    const accountSeven = accounts[7];
+    const accountEight = accounts[8];
+    const accountNine = accounts[9];
+    const accountTen = accounts[10];
+    const accountEleven = accounts[11];
+    const accountTwelwe = accounts[12];
 
    
     // setup useful values
@@ -51,623 +63,344 @@ describe("IncomeContractUBI",  async() => {
     const oneToken = 1000000000000000000; // 1token = 1e18
     const zeroAddress = "0x0000000000000000000000000000000000000000";
     
-  /*  
-    it('tests simple lifecycle (ETH)', async () => {
-        var CommunityMockInstance = await CommunityMock.new({from: accountTen});
-        var IncomeContractUBIMockInstance = await IncomeContractUBIMock.new({from: accountTen, gas: 6500000});
-        await IncomeContractUBIMockInstance.__IncomeContractUBI_init(zeroAddress, CommunityMockInstance.address, MEMBERSROLE, UBIROLE, {from: accountTen});
-        
-        await truffleAssert.reverts(
-            IncomeContractUBIMockInstance.addRecipient(accountOne),
-            "Ownable: caller is not the owner"
-        );
-         
-        await IncomeContractUBIMockInstance.addRecipient(accountOne, {from: accountTen});
-        
-        await IncomeContractUBIMockInstance.send('0x'+(10*oneEther).toString(16), { from: accountTen});
+    // vars
+    var ERC20TokenFactory, IncomeContractUBIMockFactory, CommunityMockFactory;
+    var IncomeContractUBIMockInstance, ERC20MintableToken, CommunityMockInstance;
 
-                                                  // recipient, manager
-        await IncomeContractUBIMockInstance.addManager(accountOne, accountFive, { from: accountTen});
-        
-        await truffleAssert.reverts(
-            IncomeContractUBIMockInstance.addManager(accountFourth,accountFive),
-            "Ownable: caller is not the owner"
+    beforeEach("deploying", async() => {
+        IncomeContractUBIMockFactory = await ethers.getContractFactory("IncomeContractUBIMock");
+        ERC20TokenFactory = await ethers.getContractFactory("ERC20Mintable");
+        CommunityMockFactory = await ethers.getContractFactory("CommunityMock");
+
+        IncomeContractUBIMockInstance = await IncomeContractUBIMockFactory.connect(owner).deploy();
+        ERC20MintableToken = await ERC20TokenFactory.connect(owner).deploy('t2','t2');
+        CommunityMockInstance = await CommunityMockFactory.connect(owner).deploy();
+    });
+
+  
+    for ( const ETHMode of [true, false]) {
+    it("tests simple lifecycle ("+(ETHMode ? "ETH" : "ERC20")+")", async() => {
+
+        await IncomeContractUBIMockInstance.connect(owner).init(
+            (ETHMode) ? ZERO_ADDRESS : ERC20MintableToken.address, 
+            CommunityMockInstance.address, 
+            MEMBERSROLE, 
+            UBIROLE
         );
-        
-        //var timeNow = parseInt(new Date().getTime()/1000);
-        let block = await web3.eth.getBlock("latest");
-        let timeNow = block.timestamp;
-        
+
+        await expect(
+            IncomeContractUBIMockInstance.connect(accountFive).addRecipient(accountOne.address)
+        ).to.be.revertedWith("Ownable: caller is not the owner");
+
+        await IncomeContractUBIMockInstance.connect(owner).addRecipient(accountOne.address);
+
+        if (ETHMode) {
+            await owner.sendTransaction({to: IncomeContractUBIMockInstance.address, value: TEN.mul(TENIN18)});
+        } else {
+            await ERC20MintableToken.connect(owner).mint(IncomeContractUBIMockInstance.address, TEN.mul(TENIN18));
+        }
+                                                  // recipient, manager
+        await IncomeContractUBIMockInstance.connect(owner).addManager(accountOne.address, accountFive.address);
+
+        await expect(
+            IncomeContractUBIMockInstance.connect(accountFive).addManager(accountFourth.address, accountFive.address)
+        ).to.be.revertedWith("Ownable: caller is not the owner");
+
+        let blockNumber = await ethers.provider.getBlockNumber();
+        let block = await ethers.provider.getBlock(blockNumber);
+        timeNow = block.timestamp;
+
         let t = [];
         t.push({
-            amount: '0x'+(2*oneEther).toString(16), 
+            amount: TWO.mul(TENIN18), 
             untilTime: timeNow+1*60*60, 
             gradual: false
         });
         t.push({
-            amount: '0x'+(2*oneEther).toString(16), 
+            amount: TWO.mul(TENIN18), 
             untilTime: timeNow+2*60*60, 
             gradual: false
         });
         t.push({
-            amount: '0x'+(2*oneEther).toString(16), 
+            amount: TWO.mul(TENIN18), 
             untilTime: timeNow+3*60*60, 
             gradual: false
         });
+
+        await IncomeContractUBIMockInstance.connect(owner).setLockup(accountOne.address, t);
         
-        
-        await IncomeContractUBIMockInstance.setLockup(accountOne, t, { from: accountTen});
-        
-        await truffleAssert.reverts(
-            IncomeContractUBIMockInstance.claim({ from: accountOne}),
-            'There are no avaialbe amount to claim'
-        );
-        
+        await expect(
+            IncomeContractUBIMockInstance.connect(accountOne).claim()
+        ).to.be.revertedWith("There are no avaialbe amount to claim");
         
         // pass 1 hour
-        advanceTimeAndBlock(1*60*60);
+        passTime(1*60*60);
+
         // reverts  because manager didn't pay yet
-        await truffleAssert.reverts(
-            IncomeContractUBIMockInstance.claim({ from: accountOne}),
-            'There are no avaialbe amount to claim'
-        );
+        await expect(
+            IncomeContractUBIMockInstance.connect(accountOne).claim()
+        ).to.be.revertedWith("There are no avaialbe amount to claim");
 
-        await IncomeContractUBIMockInstance.pay(accountOne, '0x'+(2*oneEther).toString(16), { from: accountFive});
+        await IncomeContractUBIMockInstance.connect(accountFive).pay(accountOne.address, TWO.mul(TENIN18));
 
-        let balanceIncomeContractUBIMockInstanceBefore = (await web3.eth.getBalance(IncomeContractUBIMockInstance.address));
-        let balanceAccountOneBefore = (await web3.eth.getBalance(accountOne));
+        let balanceIncomeContractUBIMockInstanceBefore = (ETHMode) ? await ethers.provider.getBalance(IncomeContractUBIMockInstance.address) : (await ERC20MintableToken.balanceOf(IncomeContractUBIMockInstance.address));
+        let balanceAccountOneBefore = (ETHMode) ? await ethers.provider.getBalance(accountOne.address) : (await ERC20MintableToken.balanceOf(accountOne.address));
 
         // now recipient can claim
-        let claimTxObj = await IncomeContractUBIMockInstance.claim({ from: accountOne});
-        let claimTx = await web3.eth.getTransaction(claimTxObj.tx);
+        let claimTxObj = await IncomeContractUBIMockInstance.connect(accountOne).claim();
+        let claimTx = await claimTxObj.wait();
+
+        let balanceIncomeContractUBIMockInstanceAfter = (ETHMode) ? await ethers.provider.getBalance(IncomeContractUBIMockInstance.address) : (await ERC20MintableToken.balanceOf(IncomeContractUBIMockInstance.address));
+        let balanceAccountOneAfter = (ETHMode) ? await ethers.provider.getBalance(accountOne.address) : (await ERC20MintableToken.balanceOf(accountOne.address));
         
-        let balanceAccountOneAfter = (await web3.eth.getBalance(accountOne));
-        let balanceIncomeContractUBIMockInstanceAfter = (await web3.eth.getBalance(IncomeContractUBIMockInstance.address));        
-            
-        assert.equal(
-            (
-                BigNumber(parseInt(balanceAccountOneBefore))
-                .plus(BigNumber(parseInt(2*oneEther)))
-                .minus(
-                	BigNumber(parseInt(claimTxObj["receipt"].gasUsed))
-                	.times(BigNumber(parseInt(claimTx.gasPrice)))
+        // wrong claim
+        expect(
+            balanceAccountOneBefore
+                .add(TWO.mul(TENIN18))
+                .sub(
+                    (ETHMode) 
+                    ?
+                    claimTx.cumulativeGasUsed.mul(claimTx.effectiveGasPrice)
+                    :
+                    0
+
                 )
-            ).toString(16),
-            (
-                BigNumber(parseInt(balanceAccountOneAfter))
-            ).toString(16),
-            'Balance accountOne wrong after claim'
-        );
-        
-        assert.equal(
-            (
-                BigNumber(parseInt(balanceIncomeContractUBIMockInstanceBefore))
-                
-            ).toString(16),
-            (
-                BigNumber(parseInt(balanceIncomeContractUBIMockInstanceAfter))
-                .plus(BigNumber(parseInt(2*oneEther)))
-            ).toString(16),
-            'Balance at Contract wrong after claim'
-        );
+        ).to.be.eq(balanceAccountOneAfter);
+
+        //'Balance at Contract wrong after claim'
+        expect(
+            balanceIncomeContractUBIMockInstanceBefore
+        ).to.be.eq(balanceIncomeContractUBIMockInstanceAfter.add(TWO.mul(TENIN18)));
         
         
         // reverts. recipient already got own 2 eth for first hour
-        await truffleAssert.reverts(
-            IncomeContractUBIMockInstance.claim({ from: accountOne}),
-            'There are no avaialbe amount to claim'
-        );
+        await expect(
+            IncomeContractUBIMockInstance.connect(accountOne).claim()
+        ).to.be.revertedWith("There are no avaialbe amount to claim");
         
         // managers want to pay another 2 eth( for second hour) but reverts. it is not time
-        await truffleAssert.reverts(
-            IncomeContractUBIMockInstance.pay(accountOne, '0x'+(2*oneEther).toString(16), { from: accountFive}),
-            'Amount exceeds available unlocked balance'
-        );
+        await expect(
+            IncomeContractUBIMockInstance.connect(accountFive).pay(accountOne.address, TWO.mul(TENIN18))
+        ).to.be.revertedWith("Amount exceeds available unlocked balance");
+
         // pass another 1 hour
-        advanceTimeAndBlock(1*60*60);
+        passTime(1*60*60);
         
         // now available to pay another 2eth
         // manager want to pay all eth (4eth). but reverts
-        await truffleAssert.reverts(
-            IncomeContractUBIMockInstance.pay(accountOne, '0x'+(4*oneEther).toString(16), { from: accountFive}),
-            'Amount exceeds available unlocked balance'
-        );
+        await expect(
+            IncomeContractUBIMockInstance.connect(accountFive).pay(accountOne.address, FOURTH.mul(TENIN18))
+        ).to.be.revertedWith("Amount exceeds available unlocked balance");
         
         // manager pay send 2 eth
-        await IncomeContractUBIMockInstance.pay(accountOne, '0x'+(2*oneEther).toString(16), { from: accountFive});
+        await IncomeContractUBIMockInstance.connect(accountFive).pay(accountOne.address, TWO.mul(TENIN18))
         
         // pass last 1 hour
-        advanceTimeAndBlock(1*60*60);
+        passTime(1*60*60);
         
         // now for recipient avaialble 4 eth
-        
+       
         // manager want to pay 4 eth, but 2eth of them he has already payed before. so reverts
-        await truffleAssert.reverts(
-            IncomeContractUBIMockInstance.pay(accountOne, '0x'+(4*oneEther).toString(16), { from: accountFive}),
-            'Amount exceeds available allowed balance by manager'
-        );
+        await expect(
+            IncomeContractUBIMockInstance.connect(accountFive).pay(accountOne.address, FOURTH.mul(TENIN18))
+        ).to.be.revertedWith("Amount exceeds available allowed balance by manager");
         
         // so pay only 2 eth left
-        await IncomeContractUBIMockInstance.pay(accountOne, '0x'+(2*oneEther).toString(16), { from: accountFive});
+        await IncomeContractUBIMockInstance.connect(accountFive).pay(accountOne.address, TWO.mul(TENIN18))
         
         // recipient want to claim 4 eth
-        let balanceIncomeContractUBIMockInstanceBefore2 = (await web3.eth.getBalance(IncomeContractUBIMockInstance.address));
-        let balanceAccountOneBefore2 = (await web3.eth.getBalance(accountOne));
-
-        let claimTxObj2 = await IncomeContractUBIMockInstance.claim({ from: accountOne});
-        let claimTx2 = await web3.eth.getTransaction(claimTxObj2.tx);
         
-        let balanceAccountOneAfter2 = (await web3.eth.getBalance(accountOne));
-        let balanceIncomeContractUBIMockInstanceAfter2 = (await web3.eth.getBalance(IncomeContractUBIMockInstance.address));
+        let balanceIncomeContractUBIMockInstanceBefore2 = (ETHMode) ? await ethers.provider.getBalance(IncomeContractUBIMockInstance.address) : (await ERC20MintableToken.balanceOf(IncomeContractUBIMockInstance.address));
+        let balanceAccountOneBefore2 = (ETHMode) ? await ethers.provider.getBalance(accountOne.address) : (await ERC20MintableToken.balanceOf(accountOne.address));
 
-        assert.equal(
-            (
-                (BigNumber(parseInt(balanceAccountOneBefore2)))
-                .plus(BigNumber(parseInt(4*oneEther)))
-                .minus(
-                	(BigNumber(parseInt(claimTxObj2["receipt"].gasUsed)))
-                	.times(BigNumber(parseInt(claimTx2.gasPrice)))
+        // now recipient can claim
+        let claimTxObj2 = await IncomeContractUBIMockInstance.connect(accountOne).claim();
+        let claimTx2 = await claimTxObj2.wait();
+
+        let balanceIncomeContractUBIMockInstanceAfter2 = (ETHMode) ? await ethers.provider.getBalance(IncomeContractUBIMockInstance.address) : (await ERC20MintableToken.balanceOf(IncomeContractUBIMockInstance.address));
+        let balanceAccountOneAfter2 = (ETHMode) ? await ethers.provider.getBalance(accountOne.address) : (await ERC20MintableToken.balanceOf(accountOne.address));
+
+        // wrong claim
+        expect(
+            balanceAccountOneBefore2
+                .add(FOURTH.mul(TENIN18))
+                .sub(
+                    (ETHMode) 
+                    ?
+                    claimTx2.cumulativeGasUsed.mul(claimTx2.effectiveGasPrice)
+                    :
+                    0
                 )
-            ).toString(16),
-            (
-                BigNumber(parseInt(balanceAccountOneAfter2))
-            ).toString(16),
-            'Balance accountOne wrong after last claim'
-        );
+        ).to.be.eq(balanceAccountOneAfter2);
 
-        
-        assert.equal(
-            (
-                BigNumber(parseInt(balanceIncomeContractUBIMockInstanceBefore2))
-                
-            ).toString(16),
-            (
-                BigNumber(parseInt(balanceIncomeContractUBIMockInstanceAfter2))
-                .plus(BigNumber(parseInt(4*oneEther)))
-            ).toString(16),
-            'Balance at Contract wrong after last claim'
-        );
-        
+        //'Balance at Contract wrong after claim'
+        expect(
+            balanceIncomeContractUBIMockInstanceBefore2
+        ).to.be.eq(balanceIncomeContractUBIMockInstanceAfter2.add(FOURTH.mul(TENIN18)));
+
     });
+    }
     
-    it('tests simple lifecycle (ERC20)', async () => {
-        var CommunityMockInstance = await CommunityMock.new({from: accountTen});
-        var ERC20MintableTokenInstance = await ERC20MintableToken.new('t2','t2', {from: accountTen});
-        
-        var IncomeContractUBIMockInstance = await IncomeContractUBIMock.new({from: accountTen, gas: 6500000});
-        await IncomeContractUBIMockInstance.__IncomeContractUBI_init(ERC20MintableTokenInstance.address, CommunityMockInstance.address, MEMBERSROLE, UBIROLE, {from: accountTen});
-        
-        await truffleAssert.reverts(
-            IncomeContractUBIMockInstance.addRecipient(accountOne),
-            "Ownable: caller is not the owner"
-        );
-         
-        await IncomeContractUBIMockInstance.addRecipient(accountOne, {from: accountTen});
-        
-        await ERC20MintableTokenInstance.mint(IncomeContractUBIMockInstance.address, '0x'+(10*oneEther).toString(16), { from: accountTen});
-
-                                                  // recipient, manager
-        await IncomeContractUBIMockInstance.addManager(accountOne, accountFive, { from: accountTen});
-        
-        await truffleAssert.reverts(
-            IncomeContractUBIMockInstance.addManager(accountFourth,accountFive),
-            "Ownable: caller is not the owner"
-        );
-        
-        //let timeNow = parseInt(new Date().getTime()/1000);
-        let block = await web3.eth.getBlock("latest");
-        let timeNow = block.timestamp;
-        
-        let t = [];
-        t.push({
-            amount: '0x'+(2*oneEther).toString(16), 
-            untilTime: timeNow+1*60*60, 
-            gradual: false
-        });
-        t.push({
-            amount: '0x'+(2*oneEther).toString(16), 
-            untilTime: timeNow+2*60*60, 
-            gradual: false
-        });
-        t.push({
-            amount: '0x'+(2*oneEther).toString(16), 
-            untilTime: timeNow+3*60*60, 
-            gradual: false
-        });
-        
-        
-        await IncomeContractUBIMockInstance.setLockup(accountOne, t, { from: accountTen});
-        
-        await truffleAssert.reverts(
-            IncomeContractUBIMockInstance.claim({ from: accountOne}),
-            'There are no avaialbe amount to claim'
-        );
-        
-        
-        // pass 1 hour
-        advanceTimeAndBlock(1*60*60);
-        // reverts  because manager didn't pay yet
-        await truffleAssert.reverts(
-            IncomeContractUBIMockInstance.claim({ from: accountOne}),
-            'There are no avaialbe amount to claim'
-        );
-
-        await IncomeContractUBIMockInstance.pay(accountOne, '0x'+(2*oneEther).toString(16), { from: accountFive});
-
-
-        let balanceIncomeContractUBIMockInstanceBefore = (await ERC20MintableTokenInstance.balanceOf.call(IncomeContractUBIMockInstance.address));
-        let balanceAccountOneBefore = (await ERC20MintableTokenInstance.balanceOf.call(accountOne));
-
-        // now recipient can claim
-        await IncomeContractUBIMockInstance.claim({ from: accountOne});
-
-        let balanceAccountOneAfter = (await ERC20MintableTokenInstance.balanceOf.call(accountOne));
-        let balanceIncomeContractUBIMockInstanceAfter = (await ERC20MintableTokenInstance.balanceOf.call(IncomeContractUBIMockInstance.address));        
-            
-        assert.equal(
-            (
-                BigNumber(parseInt(balanceAccountOneBefore))
-                .plus(BigNumber(parseInt(2*oneEther)))
-            ).toString(16),
-            (
-                BigNumber(parseInt(balanceAccountOneAfter))
-            ).toString(16),
-            'Balance accountOne wrong after claim'
-        );
-        
-        assert.equal(
-            (
-                BigNumber(parseInt(balanceIncomeContractUBIMockInstanceBefore))
-                
-            ).toString(16),
-            (
-                BigNumber(parseInt(balanceIncomeContractUBIMockInstanceAfter))
-                .plus(BigNumber(parseInt(2*oneEther)))
-            ).toString(16),
-            'Balance at Contract wrong after claim'
-        );
-        
-        
-        // reverts. recipient already got own 2 eth for first hour
-        await truffleAssert.reverts(
-            IncomeContractUBIMockInstance.claim({ from: accountOne}),
-            'There are no avaialbe amount to claim'
-        );
-        
-        // managers want to pay another 2 eth( for second hour) but reverts. it is not time
-        await truffleAssert.reverts(
-            IncomeContractUBIMockInstance.pay(accountOne, '0x'+(2*oneEther).toString(16), { from: accountFive}),
-            'Amount exceeds available unlocked balance'
-        );
-        // pass another 1 hour
-        advanceTimeAndBlock(1*60*60);
-        
-        // now available to pay another 2eth
-        // manager want to pay all eth (4eth). but reverts
-        await truffleAssert.reverts(
-            IncomeContractUBIMockInstance.pay(accountOne, '0x'+(4*oneEther).toString(16), { from: accountFive}),
-            'Amount exceeds available unlocked balance'
-        );
-        
-        // manager pay send 2 eth
-        await IncomeContractUBIMockInstance.pay(accountOne, '0x'+(2*oneEther).toString(16), { from: accountFive});
-        
-        // pass last 1 hour
-        advanceTimeAndBlock(1*60*60);
-        
-        // now for recipient avaialble 4 eth
-        
-        // manager want to pay 4 eth, but 2eth of them he has already payed before. so reverts
-        await truffleAssert.reverts(
-            IncomeContractUBIMockInstance.pay(accountOne, '0x'+(4*oneEther).toString(16), { from: accountFive}),
-            'Amount exceeds available allowed balance by manager'
-        );
-        
-        // so pay only 2 eth left
-        await IncomeContractUBIMockInstance.pay(accountOne, '0x'+(2*oneEther).toString(16), { from: accountFive});
-        
-        // recipient want to claim 4 eth
-        let balanceIncomeContractUBIMockInstanceBefore2 = (await ERC20MintableTokenInstance.balanceOf.call(IncomeContractUBIMockInstance.address));
-        let balanceAccountOneBefore2 = (await ERC20MintableTokenInstance.balanceOf.call(accountOne));
-
-        await IncomeContractUBIMockInstance.claim({ from: accountOne});
-        
-        let balanceAccountOneAfter2 = (await ERC20MintableTokenInstance.balanceOf.call(accountOne));
-        let balanceIncomeContractUBIMockInstanceAfter2 = (await ERC20MintableTokenInstance.balanceOf.call(IncomeContractUBIMockInstance.address));
-
-        assert.equal(
-            (
-                (BigNumber(parseInt(balanceAccountOneBefore2)))
-                .plus(BigNumber(parseInt(4*oneEther)))
-            ).toString(16),
-            (
-                BigNumber(parseInt(balanceAccountOneAfter2))
-            ).toString(16),
-            'Balance accountOne wrong after last claim'
-        );
-
-        
-        assert.equal(
-            (
-                BigNumber(parseInt(balanceIncomeContractUBIMockInstanceBefore2))
-                
-            ).toString(16),
-            (
-                BigNumber(parseInt(balanceIncomeContractUBIMockInstanceAfter2))
-                .plus(BigNumber(parseInt(4*oneEther)))
-            ).toString(16),
-            'Balance at Contract wrong after last claim'
-        );
-        
-    }); 
-    
-    it('test error enough funds. adding and clamin afterwards ', async () => {
-        var CommunityMockInstance = await CommunityMock.new({from: accountTen});
-        var ERC20MintableTokenInstance = await ERC20MintableToken.new('t2','t2', {from: accountTen});
-        var IncomeContractUBIMockInstance = await IncomeContractUBIMock.new({from: accountTen, gas: 6500000});
-        await IncomeContractUBIMockInstance.__IncomeContractUBI_init(ERC20MintableTokenInstance.address, CommunityMockInstance.address, MEMBERSROLE, UBIROLE, {from: accountTen});
-        await IncomeContractUBIMockInstance.addRecipient(accountOne, {from: accountTen});
-        await IncomeContractUBIMockInstance.addRecipient(accountTwo, {from: accountTen});
-        await ERC20MintableTokenInstance.mint(IncomeContractUBIMockInstance.address, '0x'+(10*oneEther).toString(16), { from: accountTen});
-        await IncomeContractUBIMockInstance.addManager(accountOne, accountFive, { from: accountTen});
-        await IncomeContractUBIMockInstance.addManager(accountTwo, accountFive, { from: accountTen});
-        
-        await truffleAssert.reverts(
-            IncomeContractUBIMockInstance.addManager(accountFourth,accountFive),
-            "Ownable: caller is not the owner"
-        );
-        
-        //let timeNow = parseInt(new Date().getTime()/1000);
-        let block = await web3.eth.getBlock("latest");
-        let timeNow = block.timestamp;
-        
-        let t = [];
-        t.push({
-            amount: '0x'+(8*oneEther).toString(16), 
-            untilTime: timeNow+1*60*60, 
-            gradual: false
-        });
-
-        await IncomeContractUBIMockInstance.setLockup(accountOne, t, { from: accountTen});
-        await IncomeContractUBIMockInstance.setLockup(accountTwo, t, { from: accountTen});
-        
-        // pass 1 hour
-        advanceTimeAndBlock(1*60*60);
-        
-        await IncomeContractUBIMockInstance.pay(accountOne, '0x'+(8*oneEther).toString(16), { from: accountFive});
-        await IncomeContractUBIMockInstance.pay(accountTwo, '0x'+(8*oneEther).toString(16), { from: accountFive});
-        
-        await IncomeContractUBIMockInstance.claim({ from: accountOne});
-        
-        await truffleAssert.reverts(
-            IncomeContractUBIMockInstance.claim({ from: accountTwo}),
-            "There are no enough funds at contract"
-        );
-        
-        await ERC20MintableTokenInstance.mint(IncomeContractUBIMockInstance.address, '0x'+(6*oneEther).toString(16), { from: accountTen});
-        
-        
-        let balanceIncomeContractUBIMockInstanceBefore = (await ERC20MintableTokenInstance.balanceOf.call(IncomeContractUBIMockInstance.address));
-        let balanceAccountTwoBefore = (await ERC20MintableTokenInstance.balanceOf.call(accountTwo));
-
-        // now recipient can claim
-        await IncomeContractUBIMockInstance.claim({ from: accountTwo});
-
-        let balanceAccountTwoAfter = (await ERC20MintableTokenInstance.balanceOf.call(accountTwo));
-        let balanceIncomeContractUBIMockInstanceAfter = (await ERC20MintableTokenInstance.balanceOf.call(IncomeContractUBIMockInstance.address));    
-        
-        assert.equal(
-            (
-                BigNumber(parseInt(balanceAccountTwoBefore))
-                .plus(BigNumber(parseInt(8*oneEther)))
-            ).toString(16),
-            (
-                BigNumber(parseInt(balanceAccountTwoAfter))
-            ).toString(16),
-            'Balance accountOne wrong after claim'
-        );
-        
-        assert.equal(
-            (
-                BigNumber(parseInt(balanceIncomeContractUBIMockInstanceBefore))
-                
-            ).toString(16),
-            (
-                BigNumber(parseInt(balanceIncomeContractUBIMockInstanceAfter))
-                .plus(BigNumber(parseInt(8*oneEther)))
-            ).toString(16),
-            'Balance at Contract wrong after claim'
-        );
-        
-    });
-    
+  
     it('test UBI(short)', async () => {
         let avg1,avg2,avg3,tmp,tmp1,balanceAccountTwoBefore,balanceAccountTwoAfter,avgRatio,ubiVal;
         
-        var CommunityMockInstance = await CommunityMock.new({from: accountTen});
-        var ERC20MintableTokenInstance = await ERC20MintableToken.new('t2','t2', {from: accountTen});
-        //var IncomeContractUBIMockInstance = await IncomeContractUBIMock.new(ERC20MintableTokenInstance.address,  CommunityMockInstance.address, MEMBERSROLE, UBIROLE, {from: accountTen, gas: 6000000});
-        var IncomeContractUBIMockInstance = await IncomeContractUBIMock.new({from: accountTen, gas: 6500000});
-        await IncomeContractUBIMockInstance.__IncomeContractUBI_init(ERC20MintableTokenInstance.address, CommunityMockInstance.address, MEMBERSROLE, UBIROLE, {from: accountTen});
-        await ERC20MintableTokenInstance.mint(IncomeContractUBIMockInstance.address, '0x'+(100*oneToken).toString(16), { from: accountTen});
+        await IncomeContractUBIMockInstance.connect(owner).init(
+            ERC20MintableToken.address, 
+            CommunityMockInstance.address, 
+            MEMBERSROLE, 
+            UBIROLE
+        );
+
+        await ERC20MintableToken.connect(owner).mint(IncomeContractUBIMockInstance.address, TEN.mul(TENIN18));
         
-        var SomeExternalContractMockInstance = await SomeExternalContractMock.new(IncomeContractUBIMockInstance.address, {from: accountTen});
-        
-        var ratioMultiplier = await IncomeContractUBIMockInstance.getRatioMultiplier({ from: accountTwo});
-        
-        
+        let SomeExternalContractMockFactory = await ethers.getContractFactory("SomeExternalContractMock");
+
+        var SomeExternalContractMockInstance = await SomeExternalContractMockFactory.connect(owner).deploy(IncomeContractUBIMockInstance.address);
+
+        var ratioMultiplier = await IncomeContractUBIMockInstance.connect(accountTwo).getRatioMultiplier();
+
         // set ratio  0.4,0.5,0.6
         // set avg price 1 token
-        await SomeExternalContractMockInstance.setRatio('price', 0.4*ratioMultiplier, { from: accountTwo});
-        await SomeExternalContractMockInstance.setRatio('price', 0.5*ratioMultiplier, { from: accountTwo});
-        await SomeExternalContractMockInstance.setRatio('price', 0.6*ratioMultiplier, { from: accountTwo});
-        await SomeExternalContractMockInstance.setAvgPrice('price', '0x'+(1*oneToken).toString(16), { from: accountTwo});
-        
-        
-        avg1 = BigNumber(0.4);
-        avg2 = avg1.plus((BigNumber(0.5).minus(avg1)).div(BigNumber(10)));
-        avg3 = avg2.plus((BigNumber(0.6).minus(avg2)).div(BigNumber(10)));
-        avgRatio = avg3;
-        ubiVal = (BigNumber(avgRatio).times(BigNumber(1)).times(BigNumber(oneToken)));
-        // tmp = await IncomeContractUBIMockInstance.getStartDateIndex({from: accountFive})
-        // console.log(tmp.toString(10));
-        
-        // pass 1 day = 86400 seconds. 
-        await helper.advanceTimeAndBlock(86400);
+        await SomeExternalContractMockInstance.connect(accountTwo).setRatio('price', BigNumber.from(ratioMultiplier).mul(4).div(10));
+        await SomeExternalContractMockInstance.connect(accountTwo).setRatio('price', BigNumber.from(ratioMultiplier).mul(5).div(10));
+        await SomeExternalContractMockInstance.connect(accountTwo).setRatio('price', BigNumber.from(ratioMultiplier).mul(6).div(10));
+        await SomeExternalContractMockInstance.connect(accountTwo).setAvgPrice('price', ONE.mul(TENIN18));
 
-        tmp = await IncomeContractUBIMockInstance.checkUBI({from: accountFive});
+        // avg2 = avg1.plus((BigNumber(0.5).minus(avg1)).div(BigNumber(10)));
+        // avg3 = avg2.plus((BigNumber(0.6).minus(avg2)).div(BigNumber(10)));
+        // avgRatio = avg3;
+        // ubiVal = (BigNumber(avgRatio).times(BigNumber(1)).times(BigNumber(oneToken)));
+        // make this static vals. ethers can not use float   like 0.123
+        avg1 = 0.4
+        avg2 = 0.41
+        avg3 = 0.429
+        avgRatio = 0.429
+        ubiVal = ONE.mul(TENIN18).mul(429).div(1000);
+        //---------------------------------------
+
+        // pass 1 day = 86400 seconds. 
+        passTime(24*60*60);
+
+        tmp = await IncomeContractUBIMockInstance.connect(accountFive).checkUBI();
         
-        assert.equal(
-            (BigNumber(tmp)).toString(16),
-            (BigNumber(ubiVal)).toString(16),
-            'UBI check is not as expected'
-        );
+        // 'UBI check is not as expected'
+        expect(tmp).to.be.eq(ubiVal);
+
+  
+        balanceAccountTwoBefore = await ERC20MintableToken.balanceOf(accountFive.address);
+        await IncomeContractUBIMockInstance.connect(accountFive).claimUBI();
+        balanceAccountTwoAfter = await ERC20MintableToken.balanceOf(accountFive.address);
         
-        balanceAccountTwoBefore = (await ERC20MintableTokenInstance.balanceOf.call(accountFive));
-        await IncomeContractUBIMockInstance.claimUBI({from: accountFive});
-        balanceAccountTwoAfter = (await ERC20MintableTokenInstance.balanceOf.call(accountFive));
+        //'balance after claim UBI is not as expected'
+        expect(balanceAccountTwoAfter).to.be.eq(balanceAccountTwoBefore.add(ubiVal));
         
-        assert.equal(
-            (BigNumber(balanceAccountTwoAfter)).toString(16),
-            (
-                BigNumber(balanceAccountTwoBefore).plus((BigNumber(ubiVal)))
-            ).toString(16),
-            'balance after claim UBI is not as expected'
-        );
         
-        tmp = await IncomeContractUBIMockInstance.checkUBI({from: accountFive});
-        assert.equal(
-            (BigNumber(tmp)).toString(16),
-            (BigNumber(0)).toString(16),
-            'UBI must be zero after claim'
-        );
+        tmp = await IncomeContractUBIMockInstance.connect(accountFive).checkUBI();
+        //'UBI must be zero after claim'
+        expect(tmp).to.be.eq(ZERO);
         
-        await truffleAssert.reverts(
-            IncomeContractUBIMockInstance.claimUBI({from: accountFive}),
-            "Amount exceeds balance available to claim"
-        );
+        await expect(
+            IncomeContractUBIMockInstance.connect(accountFive).claimUBI()
+        ).to.be.revertedWith("Amount exceeds balance available to claim");
         //---------------------------------------------------------------------------
         
         // pass another 1 day = 86400 seconds. 
-        await helper.advanceTimeAndBlock(86400);
+        passTime(24*60*60);
 
+        tmp = await IncomeContractUBIMockInstance.connect(accountFive).checkUBI();
+        
+        // 'UBI check is not as expected'
+        expect(tmp).to.be.eq(ubiVal);
 
-        tmp = await IncomeContractUBIMockInstance.checkUBI({from: accountFive});
+        balanceAccountTwoBefore = await ERC20MintableToken.balanceOf(accountFive.address);
+        await IncomeContractUBIMockInstance.connect(accountFive).claimUBI();
+        balanceAccountTwoAfter = await ERC20MintableToken.balanceOf(accountFive.address);
         
-        assert.equal(
-            (BigNumber(tmp)).toString(16),
-            (BigNumber(ubiVal)).toString(16),
-            'UBI check is not as expected'
-        );
+        //'balance after claim UBI is not as expected'
+        expect(balanceAccountTwoAfter).to.be.eq(balanceAccountTwoBefore.add(ubiVal));
         
-        balanceAccountTwoBefore = (await ERC20MintableTokenInstance.balanceOf.call(accountFive));
-        await IncomeContractUBIMockInstance.claimUBI({from: accountFive});
-        balanceAccountTwoAfter = (await ERC20MintableTokenInstance.balanceOf.call(accountFive));
-        
-        assert.equal(
-            (BigNumber(balanceAccountTwoAfter)).toString(16),
-            (
-                BigNumber(balanceAccountTwoBefore).plus((BigNumber(ubiVal)))
-            ).toString(16),
-            'balance after claim UBI is not as expected'
-        );
-        
-        tmp = await IncomeContractUBIMockInstance.checkUBI({from: accountFive});
-        assert.equal(
-            (BigNumber(tmp)).toString(16),
-            (BigNumber(0)).toString(16),
-            'UBI must be zero after claim'
-        );
+        tmp = await IncomeContractUBIMockInstance.connect(accountFive).checkUBI();
+        //'UBI must be zero after claim'
+        expect(tmp).to.be.eq(ZERO);
         //---------------------------------------------------------------------------
         
         // for now try to change ratio but not price.
         // ubi value should left the same as previous
-        await SomeExternalContractMockInstance.setRatio('price', 0.4*ratioMultiplier, { from: accountTwo});
-        await SomeExternalContractMockInstance.setRatio('price', 0.5*ratioMultiplier, { from: accountTwo});
-        await SomeExternalContractMockInstance.setRatio('price', 0.6*ratioMultiplier, { from: accountTwo});
-        await helper.advanceTimeAndBlock(86400);
-
-        avg1 = avgRatio.plus((BigNumber(0.4).minus(avgRatio)).div(BigNumber(10)));
-        avg2 = avg1.plus((BigNumber(0.5).minus(avg1)).div(BigNumber(10)));
-        avg3 = avg2.plus((BigNumber(0.6).minus(avg2)).div(BigNumber(10)));
+        await SomeExternalContractMockInstance.connect(accountTwo).setRatio('price', BigNumber.from(ratioMultiplier).mul(4).div(10));
+        await SomeExternalContractMockInstance.connect(accountTwo).setRatio('price', BigNumber.from(ratioMultiplier).mul(5).div(10));
+        await SomeExternalContractMockInstance.connect(accountTwo).setRatio('price', BigNumber.from(ratioMultiplier).mul(6).div(10));
+        
+        passTime(24*60*60);
+        
+        // avg1 = avgRatio.plus((BigNumber(0.4).minus(avgRatio)).div(BigNumber(10)));
+        // avg2 = avg1.plus((BigNumber(0.5).minus(avg1)).div(BigNumber(10)));
+        // avg3 = avg2.plus((BigNumber(0.6).minus(avg2)).div(BigNumber(10)));
+        // avgRatio = avg3;
+        avg1 = 0.4261;
+        avg2 = 0.43349;
+        avg3 = 0.450141;
         avgRatio = avg3;
         
-        tmp = await IncomeContractUBIMockInstance.checkUBI({from: accountFive});
+        tmp = await IncomeContractUBIMockInstance.connect(accountFive).checkUBI();
+        //'UBI check is not as expected'
+        expect(tmp).to.be.eq(ubiVal);
         
-        assert.equal(
-            (BigNumber(tmp)).toString(16),
-            (BigNumber(ubiVal)).toString(16),
-            'UBI check is not as expected'
-        );
+        balanceAccountTwoBefore = await ERC20MintableToken.balanceOf(accountFive.address);
+        await IncomeContractUBIMockInstance.connect(accountFive).claimUBI();
+        balanceAccountTwoAfter = await ERC20MintableToken.balanceOf(accountFive.address);
         
-        balanceAccountTwoBefore = (await ERC20MintableTokenInstance.balanceOf.call(accountFive));
-        await IncomeContractUBIMockInstance.claimUBI({from: accountFive});
-        balanceAccountTwoAfter = (await ERC20MintableTokenInstance.balanceOf.call(accountFive));
+        //'balance after claim UBI is not as expected'
+        expect(balanceAccountTwoAfter).to.be.eq(balanceAccountTwoBefore.add(ubiVal));
         
-        assert.equal(
-            (BigNumber(balanceAccountTwoAfter)).toString(16),
-            (
-                BigNumber(balanceAccountTwoBefore).plus((BigNumber(ubiVal)))
-            ).toString(16),
-            'balance after claim UBI is not as expected'
-        );
+        tmp = await IncomeContractUBIMockInstance.connect(accountFive).checkUBI();
+        //'UBI must be zero after claim'
+        expect(tmp).to.be.eq(ZERO);
         
-        tmp = await IncomeContractUBIMockInstance.checkUBI({from: accountFive});
-        assert.equal(
-            (BigNumber(tmp)).toString(16),
-            (BigNumber(0)).toString(16),
-            'UBI must be zero after claim'
-        );
         //---------------------------------------------------------------------------
         
         // for now try to change ratio AND price.
         // ubi value should to grow up
-        await SomeExternalContractMockInstance.setRatio('price', 0.4*ratioMultiplier, { from: accountTwo});
-        await SomeExternalContractMockInstance.setRatio('price', 0.5*ratioMultiplier, { from: accountTwo});
-        await SomeExternalContractMockInstance.setRatio('price', 0.6*ratioMultiplier, { from: accountTwo});
-        await SomeExternalContractMockInstance.setAvgPrice('price', '0x'+(2*oneToken).toString(16), { from: accountTwo});
-        await helper.advanceTimeAndBlock(86400);
-
-        // avg1 = BigNumber(0.4);
+        await SomeExternalContractMockInstance.connect(accountTwo).setRatio('price', BigNumber.from(ratioMultiplier).mul(4).div(10));
+        await SomeExternalContractMockInstance.connect(accountTwo).setRatio('price', BigNumber.from(ratioMultiplier).mul(5).div(10));
+        await SomeExternalContractMockInstance.connect(accountTwo).setRatio('price', BigNumber.from(ratioMultiplier).mul(6).div(10));
+        await SomeExternalContractMockInstance.connect(accountTwo).setAvgPrice('price', TWO.mul(TENIN18));
+        passTime(24*60*60);
+        
+        // avg1 = avgRatio.plus((BigNumber(0.4).minus(avgRatio)).div(BigNumber(10)));
         // avg2 = avg1.plus((BigNumber(0.5).minus(avg1)).div(BigNumber(10)));
         // avg3 = avg2.plus((BigNumber(0.6).minus(avg2)).div(BigNumber(10)));
-        
-        avg1 = avgRatio.plus((BigNumber(0.4).minus(avgRatio)).div(BigNumber(10)));
-        avg2 = avg1.plus((BigNumber(0.5).minus(avg1)).div(BigNumber(10)));
-        avg3 = avg2.plus((BigNumber(0.6).minus(avg2)).div(BigNumber(10)));
+        // avgRatio = avg3;
+        avg1=0.4451269;
+        avg2=0.45061421;
+        avg3=0.465552789;
         avgRatio = avg3;
+        
+        // ubiVal = (BigNumber(avgRatio).times(BigNumber(2)).times(BigNumber(oneToken)));
+        //ubiVal = (TENIN18).mul(avgRatio).mul(2);
+        ubiVal = (TENIN18).mul(465552789).mul(2).div(1000000000);
 
-        ubiVal = (BigNumber(avgRatio).times(BigNumber(2)).times(BigNumber(oneToken)));
+        tmp = await IncomeContractUBIMockInstance.connect(accountFive).checkUBI();
 
-        tmp = await IncomeContractUBIMockInstance.checkUBI({from: accountFive});
+        //'UBI check is not as expected'
+        expect(tmp).to.be.eq(ubiVal);
         
-        assert.equal(
-            (BigNumber(tmp)).toString(16),
-            (BigNumber(ubiVal)).toString(16),
-            'UBI check is not as expected'
-        );
+        balanceAccountTwoBefore = await ERC20MintableToken.balanceOf(accountFive.address);
+        await IncomeContractUBIMockInstance.connect(accountFive).claimUBI();
+        balanceAccountTwoAfter = await ERC20MintableToken.balanceOf(accountFive.address);
         
-        balanceAccountTwoBefore = (await ERC20MintableTokenInstance.balanceOf.call(accountFive));
-        await IncomeContractUBIMockInstance.claimUBI({from: accountFive});
-        balanceAccountTwoAfter = (await ERC20MintableTokenInstance.balanceOf.call(accountFive));
+        //'balance after claim UBI is not as expected'
+        expect(balanceAccountTwoAfter).to.be.eq(balanceAccountTwoBefore.add(ubiVal));
         
-        assert.equal(
-            (BigNumber(balanceAccountTwoAfter)).toString(16),
-            (
-                BigNumber(balanceAccountTwoBefore).plus((BigNumber(ubiVal)))
-            ).toString(16),
-            'balance after claim UBI is not as expected'
-        );
+        tmp = await IncomeContractUBIMockInstance.connect(accountFive).checkUBI();
         
-        tmp = await IncomeContractUBIMockInstance.checkUBI({from: accountFive});
-        assert.equal(
-            (BigNumber(tmp)).toString(16),
-            (BigNumber(0)).toString(16),
-            'UBI must be zero after claim'
-        );
+        // 'UBI must be zero after claim'
+        expect(tmp).to.be.eq(ZERO);
+        
         //---------------------------------------------------------------------------
         
         
     });
-    */
+
+      
 });
