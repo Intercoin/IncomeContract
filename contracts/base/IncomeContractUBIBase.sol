@@ -2,8 +2,6 @@
 pragma solidity ^0.8.11;
 pragma experimental ABIEncoderV2;
 
-import "@openzeppelin/contracts-upgradeable/utils/math/SignedSafeMathUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/structs/EnumerableSetUpgradeable.sol";
 
 import "../lib/DateTime.sol";
@@ -22,9 +20,7 @@ abstract contract IncomeContractUBIBase is IUBI, IncomeContractBase {
     uint256 constant sampleSize = 10;
     uint256 constant multiplier = 1e6;
     
-    using SafeMathUpgradeable for uint256;
-    using SignedSafeMathUpgradeable for uint256;
-    using SignedSafeMathUpgradeable for int256;
+    
     using DateTime for uint256;
     
     uint256 private startDateIndex;
@@ -186,11 +182,11 @@ abstract contract IncomeContractUBIBase is IUBI, IncomeContractBase {
             } else {
                prevUBI = UBIValues[i];
             }
-            total = total.add(prevUBI);
-            lastIndex = i.add(DateTime.DAY_IN_SECONDS);
+            total = total + prevUBI;
+            lastIndex = i + DateTime.DAY_IN_SECONDS;
             
         }
-        ubi =  (total.sub(payed)).div(multiplier);
+        ubi =  (total - payed) / multiplier;
 
     }
     
@@ -201,11 +197,11 @@ abstract contract IncomeContractUBIBase is IUBI, IncomeContractBase {
         canObtainUBI()
     {
         _actualizeUBI();
-        uint256 toPay = users[msg.sender].total.sub(users[msg.sender].payed);
-        require(toPay.div(multiplier) > 0, 'Amount exceeds balance available to claim');
-        users[msg.sender].payed = users[msg.sender].payed.add(toPay);
-        bool success = _claim(msg.sender, toPay.div(multiplier));
-        require(success == true, 'There are no enough funds at contract');
+        uint256 toPay = users[msg.sender].total - users[msg.sender].payed;
+        require(toPay / multiplier > 0, "Amount exceeds balance available to claim");
+        users[msg.sender].payed = users[msg.sender].payed + toPay;
+        bool success = _claim(msg.sender, toPay / multiplier);
+        require(success == true, "There are no enough funds at contract");
         
     }
     
@@ -229,11 +225,11 @@ abstract contract IncomeContractUBIBase is IUBI, IncomeContractBase {
             } else {
                 users[msg.sender].prevUBI = UBIValues[i];
             }
-            users[msg.sender].total = users[msg.sender].total.add(users[msg.sender].prevUBI);
-            users[msg.sender].lastIndex = i.add(DateTime.DAY_IN_SECONDS);
+            users[msg.sender].total = users[msg.sender].total + users[msg.sender].prevUBI;
+            users[msg.sender].lastIndex = i + DateTime.DAY_IN_SECONDS;
             
         }
-        ubi =  (users[msg.sender].total.sub(users[msg.sender].payed)).div(multiplier);
+        ubi =  (users[msg.sender].total - users[msg.sender].payed) / multiplier;
 
     }
     
@@ -257,10 +253,10 @@ abstract contract IncomeContractUBIBase is IUBI, IncomeContractBase {
         
         uint256 ubi;
         for (uint256 i=0; i< tagsIndex; i++) {
-            ubi = ubi.add(
-                multiplier.mul(
-                    uint256(ratiosData[_tagsIndices[i]].average).mul(avgPrices[_tagsIndices[i]][dateIndex]).div(multiplier)
-                ).div(multiplier)
+            ubi = ubi + (
+                multiplier * (
+                    uint256(ratiosData[_tagsIndices[i]].average) * (avgPrices[_tagsIndices[i]][dateIndex]) / (multiplier)
+                ) / multiplier
             );
             
         }
@@ -285,9 +281,9 @@ abstract contract IncomeContractUBIBase is IUBI, IncomeContractBase {
     ) 
         private 
     {
-        ratio = ratio.mul(int256(multiplier));
+        ratio = ratio*int256(multiplier);
         
-        ratiosData[tagBytes32].total = ratiosData[tagBytes32].total.add(ratio);
+        ratiosData[tagBytes32].total = ratiosData[tagBytes32].total + ratio;
         
         if (ratiosData[tagBytes32].alreadyInit == false) {
             ratiosData[tagBytes32].alreadyInit = true;
@@ -295,7 +291,7 @@ abstract contract IncomeContractUBIBase is IUBI, IncomeContractBase {
             ratiosData[tagBytes32].average = ratio;
             ratiosData[tagBytes32].prevRatio = ratio;
         } else {
-            ratiosData[tagBytes32].count = ratiosData[tagBytes32].count.add(1);
+            ratiosData[tagBytes32].count = ratiosData[tagBytes32].count + 1;
             //int256 oldAverage = ratiosData[tagBytes32].average;
             
             // https://stackoverflow.com/questions/10930732/c-efficiently-calculating-a-running-median/15150143#15150143
@@ -303,11 +299,11 @@ abstract contract IncomeContractUBIBase is IUBI, IncomeContractBase {
             // average += ( sample - average ) * 0.1f; // rough running average.
             // median += _copysign( average * 0.01, sample - median );
             // but "0.1f" replace to "sampleSize"
-            ratiosData[tagBytes32].average = ratiosData[tagBytes32].average.add(
+            ratiosData[tagBytes32].average = ratiosData[tagBytes32].average + (
                 (
                     (
-                        (int256(ratio)).sub(ratiosData[tagBytes32].average)
-                    ).div(int256(sampleSize))
+                        (int256(ratio))- (ratiosData[tagBytes32].average)
+                    ) / (int256(sampleSize))
                 )
             );
             
@@ -322,7 +318,7 @@ abstract contract IncomeContractUBIBase is IUBI, IncomeContractBase {
         if (_tags[tag] == 0) {
             _tags[tag] = tagsIndex;
             _tagsIndices[tagsIndex] = tag;
-            tagsIndex = tagsIndex.add(1);
+            tagsIndex = tagsIndex + 1;
         }
        
     }

@@ -2,7 +2,6 @@
 pragma solidity ^0.8.11;
 pragma experimental ABIEncoderV2;
 
-import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/structs/EnumerableSetUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
@@ -12,7 +11,6 @@ import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.
 import "../IntercoinTrait.sol";
 
 abstract contract IncomeContractBase is OwnableUpgradeable, ReentrancyGuardUpgradeable, IntercoinTrait {
-    using SafeMathUpgradeable for uint256;
     using EnumerableSetUpgradeable for EnumerableSetUpgradeable.AddressSet;
     
     struct Restrict {
@@ -30,12 +28,12 @@ abstract contract IncomeContractBase is OwnableUpgradeable, ReentrancyGuardUpgra
     
     
     modifier recipientExists(address recipient) {
-        require(recipients[recipient].exists == true, 'There are no such recipient');
+        require(recipients[recipient].exists == true, "There are no such recipient");
         _;
     }
     
     modifier canManage(address recipient) {
-        require(recipients[recipient].managers.contains(_msgSender()) == true, 'Can not manage such recipient');
+        require(recipients[recipient].managers.contains(_msgSender()) == true, "Can not manage such recipient");
         _;
     }
    
@@ -114,10 +112,10 @@ abstract contract IncomeContractBase is OwnableUpgradeable, ReentrancyGuardUpgra
 
         for (uint256 i = 0; i < restrictions.length; i++ ) {
             // add to amountMax
-            recipients[recipient].amountMax = recipients[recipient].amountMax.add(restrictions[i].amount);
+            recipients[recipient].amountMax = recipients[recipient].amountMax + restrictions[i].amount;
             
             // adding restriction
-            require(restrictions[i].untilTime > block.timestamp, 'untilTime must be more than current time');
+            require(restrictions[i].untilTime > block.timestamp, "untilTime must be more than current time");
             recipients[recipient].restrictions.push(Restrict({
                 amount: restrictions[i].amount,
                 startTime: block.timestamp,
@@ -129,8 +127,8 @@ abstract contract IncomeContractBase is OwnableUpgradeable, ReentrancyGuardUpgra
     }
     
     /** allow manager pay some funds to recipients
-     * @param recipient recipient's address
-     * @param manager manager's address
+     * @param recipient recipient"s address
+     * @param manager manager"s address
      */
     function addManager(
         address recipient, 
@@ -143,8 +141,8 @@ abstract contract IncomeContractBase is OwnableUpgradeable, ReentrancyGuardUpgra
     }
     
     /** disallow manager pay some funds to recipients
-     * @param recipient recipient's address
-     * @param manager manager's address
+     * @param recipient recipient"s address
+     * @param manager manager"s address
      */
     function removeManager(
         address recipient, 
@@ -160,7 +158,7 @@ abstract contract IncomeContractBase is OwnableUpgradeable, ReentrancyGuardUpgra
     //////////// managers section /////////////////////
     
     /**
-     * @param recipient recipient's address
+     * @param recipient recipient"s address
      * @param amount amount to pay 
      */
     function pay(
@@ -174,14 +172,14 @@ abstract contract IncomeContractBase is OwnableUpgradeable, ReentrancyGuardUpgra
         
         (uint256 maximum, uint256 payed, uint256 locked, uint256 allowedByManager, ) = _viewLockup(recipient);
         
-        uint256 availableUnlocked = maximum.sub(payed).sub(locked);
+        uint256 availableUnlocked = maximum - payed - locked;
         
-        require (amount > 0, 'Amount can not be a zero');
+        require (amount > 0, "Amount can not be a zero");
 
-        require (amount <= availableUnlocked, 'Amount exceeds available unlocked balance');
-        require (amount <= availableUnlocked.sub(allowedByManager), 'Amount exceeds available allowed balance by manager');
+        require (amount <= availableUnlocked, "Amount exceeds available unlocked balance");
+        require (amount <= availableUnlocked - allowedByManager, "Amount exceeds available allowed balance by manager");
         
-        recipients[recipient].amountAllowedByManager = recipients[recipient].amountAllowedByManager.add(amount);
+        recipients[recipient].amountAllowedByManager = recipients[recipient].amountAllowedByManager + amount;
         
     }
     
@@ -196,13 +194,13 @@ abstract contract IncomeContractBase is OwnableUpgradeable, ReentrancyGuardUpgra
     {
         (,,, uint256 allowedByManager, ) = _viewLockup(_msgSender());
         // 40 20 0 10 => 40 30 0 0
-        require (allowedByManager > 0, 'There are no avaialbe amount to claim');
+        require (allowedByManager > 0, "There are no avaialbe amount to claim");
 
         recipients[_msgSender()].amountAllowedByManager = 0;
-        recipients[_msgSender()].amountPayed = recipients[_msgSender()].amountPayed.add(allowedByManager);
+        recipients[_msgSender()].amountPayed = recipients[_msgSender()].amountPayed + allowedByManager;
         bool success = _claim(_msgSender(), allowedByManager);
 
-        require(success == true, 'There are no enough funds at contract');
+        require(success == true, "There are no enough funds at contract");
         
     }
     
@@ -229,13 +227,13 @@ abstract contract IncomeContractBase is OwnableUpgradeable, ReentrancyGuardUpgra
             uint256 allowedByManager
         )
     {
-        require(recipients[recipient].exists == true, 'There are no such recipient');
+        require(recipients[recipient].exists == true, "There are no such recipient");
         (maximum, payed, locked,allowedByManager,) = _viewLockup(recipient);
     }
     
     
     /**
-     * @param recipient recipient's address
+     * @param recipient recipient"s address
      */
     function _claim(
         address recipient, 
@@ -276,13 +274,13 @@ abstract contract IncomeContractBase is OwnableUpgradeable, ReentrancyGuardUpgra
         for (uint256 i = 0; i < restrictions.length; i++ ) {
             if (restrictions[i].untilTime > block.timestamp) {
                 if (restrictions[i].gradual == true) {
-                    fundsPerSecond = restrictions[i].amount.div(restrictions[i].untilTime.sub(restrictions[i].startTime));
-                    locked = locked.add(
-                        fundsPerSecond.mul(restrictions[i].untilTime.sub(block.timestamp))
+                    fundsPerSecond = restrictions[i].amount / (restrictions[i].untilTime - restrictions[i].startTime);
+                    locked = locked + (
+                        fundsPerSecond * (restrictions[i].untilTime - block.timestamp)
                     );
                     
                 } else {
-                    locked = locked.add(restrictions[i].amount);
+                    locked = locked + restrictions[i].amount;
                 
                 }
             }
@@ -291,7 +289,7 @@ abstract contract IncomeContractBase is OwnableUpgradeable, ReentrancyGuardUpgra
     }
     
     /**
-     * @param recipient recipient's address
+     * @param recipient recipient"s address
      */
     function _viewLockup(
         address recipient
