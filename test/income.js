@@ -13,6 +13,7 @@ const TWO = BigNumber.from('2');
 const THREE = BigNumber.from('3');
 const FOURTH = BigNumber.from('4');
 const SIX = BigNumber.from('6');
+const EIGHT = BigNumber.from('8');
 const NINE = BigNumber.from('9');
 const TEN = BigNumber.from('10');
 const HUN = BigNumber.from('100');
@@ -23,33 +24,43 @@ const FRACTION = BigNumber.from('100000');
 
 chai.use(require('chai-bignumber')());
 
-describe("itrx", function () {
+
+var  passTime = async(seconds) => {
+    if (typeof(seconds) === 'undefined') {
+        seconds = 1*60*60; // one hour
+    } else {
+        seconds = parseInt(seconds);
+    }
+    // pass last 1 hour
+    await ethers.provider.send('evm_increaseTime', [seconds]);
+    await ethers.provider.send('evm_mine');
+}
+
+describe("income",  async() => {
     const accounts = waffle.provider.getWallets();
 
     const owner = accounts[0];                     
     const accountOne = accounts[1];
+    const accountTwo  = accounts[2];
     const accountFourth = accounts[4];
     const accountFive = accounts[5];
+    const accountNine = accounts[9];
 
     // vars
-    var IncomeContractMock, IncomeContractMockFactory;
-    var ERC20MintableToken, ERC20MintableTokenFactory;
-
+    var ERC20TokenFactory, IncomeContractMockFactory;
+    var IncomeContractMock, ERC20MintableToken;
     beforeEach("deploying", async() => {
         IncomeContractMockFactory = await ethers.getContractFactory("IncomeContractMock");
+        ERC20TokenFactory = await ethers.getContractFactory("ERC20Mintable");
+
         IncomeContractMock = await IncomeContractMockFactory.connect(owner).deploy();
-        ERC20MintableTokenFactory = await ethers.getContractFactory("ERC20Mintable");
+        ERC20MintableToken = await ERC20TokenFactory.connect(owner).deploy('t2','t2');
     });
+
     for ( const ETHMode of [true, false]) {
     it("tests simple lifecycle ("+(ETHMode ? "ETH" : "ERC20")+")", async() => {
-        
-        if (ETHMode) {
-            await IncomeContractMock.connect(owner).__IncomeContract_init(ZERO_ADDRESS);
-        } else {
-            ERC20MintableToken = await ERC20MintableTokenFactory.connect(owner).deploy('t2','t2');
-            if (!ETHMode) { return;}
-            await IncomeContractMock.connect(owner).__IncomeContract_init(ERC20MintableToken.address);
-        }
+
+        await IncomeContractMock.connect(owner).__IncomeContract_init((ETHMode) ? ZERO_ADDRESS : ERC20MintableToken.address);
 
         await expect(
             IncomeContractMock.connect(accountFive).addRecipient(accountOne.address)
@@ -95,7 +106,6 @@ describe("itrx", function () {
             IncomeContractMock.connect(accountOne).claim()
         ).to.be.revertedWith("There are no avaialbe amount to claim");
         
-        
         // pass 1 hour
         await ethers.provider.send('evm_increaseTime', [1*60*60]);
         await ethers.provider.send('evm_mine');
@@ -106,17 +116,16 @@ describe("itrx", function () {
 
         await IncomeContractMock.connect(accountFive).pay(accountOne.address, TWO.mul(TENIN18));
 
+        let balanceIncomeContractMockBefore = (ETHMode) ? await ethers.provider.getBalance(IncomeContractMock.address) : (await ERC20MintableToken.balanceOf(IncomeContractMock.address));
 
-
-        let balanceIncomeContractMockBefore = (ETHMode) ? await ethers.provider.getBalance(IncomeContractMock.address) : (await ERC20MintableToken.balanceOf.call(IncomeContractMock.address));
-        let balanceAccountOneBefore = (ETHMode) ? await ethers.provider.getBalance(accountOne.address) : (await ERC20MintableToken.balanceOf.call(accountOne.address));
+        let balanceAccountOneBefore = (ETHMode) ? await ethers.provider.getBalance(accountOne.address) : (await ERC20MintableToken.balanceOf(accountOne.address));
 
         // now recipient can claim
         let claimTxObj = await IncomeContractMock.connect(accountOne).claim();
         let claimTx = await claimTxObj.wait();
 
-        let balanceIncomeContractMockAfter = (ETHMode) ? await ethers.provider.getBalance(IncomeContractMock.address) : (await ERC20MintableToken.balanceOf.call(IncomeContractMock.address));
-        let balanceAccountOneAfter = (ETHMode) ? await ethers.provider.getBalance(accountOne.address) : (await ERC20MintableToken.balanceOf.call(accountOne.address));
+        let balanceIncomeContractMockAfter = (ETHMode) ? await ethers.provider.getBalance(IncomeContractMock.address) : (await ERC20MintableToken.balanceOf(IncomeContractMock.address));
+        let balanceAccountOneAfter = (ETHMode) ? await ethers.provider.getBalance(accountOne.address) : (await ERC20MintableToken.balanceOf(accountOne.address));
         
         // wrong claim
         expect(
@@ -177,15 +186,15 @@ describe("itrx", function () {
         
         // recipient want to claim 4 eth
         
-        let balanceIncomeContractMockBefore2 = (ETHMode) ? await ethers.provider.getBalance(IncomeContractMock.address) : (await ERC20MintableToken.balanceOf.call(IncomeContractMock.address));
-        let balanceAccountOneBefore2 = (ETHMode) ? await ethers.provider.getBalance(accountOne.address) : (await ERC20MintableToken.balanceOf.call(accountOne.address));
+        let balanceIncomeContractMockBefore2 = (ETHMode) ? await ethers.provider.getBalance(IncomeContractMock.address) : (await ERC20MintableToken.balanceOf(IncomeContractMock.address));
+        let balanceAccountOneBefore2 = (ETHMode) ? await ethers.provider.getBalance(accountOne.address) : (await ERC20MintableToken.balanceOf(accountOne.address));
 
         // now recipient can claim
         let claimTxObj2 = await IncomeContractMock.connect(accountOne).claim();
         let claimTx2 = await claimTxObj2.wait();
 
-        let balanceIncomeContractMockAfter2 = (ETHMode) ? await ethers.provider.getBalance(IncomeContractMock.address) : (await ERC20MintableToken.balanceOf.call(IncomeContractMock.address));
-        let balanceAccountOneAfter2 = (ETHMode) ? await ethers.provider.getBalance(accountOne.address) : (await ERC20MintableToken.balanceOf.call(accountOne.address));
+        let balanceIncomeContractMockAfter2 = (ETHMode) ? await ethers.provider.getBalance(IncomeContractMock.address) : (await ERC20MintableToken.balanceOf(IncomeContractMock.address));
+        let balanceAccountOneAfter2 = (ETHMode) ? await ethers.provider.getBalance(accountOne.address) : (await ERC20MintableToken.balanceOf(accountOne.address));
 
         // wrong claim
         expect(
@@ -208,90 +217,67 @@ describe("itrx", function () {
     });
     }
     
-   
+    
+    it('test error enough funds. adding and clamin afterwards ', async () => {
+        
+        await IncomeContractMock.connect(owner).__IncomeContract_init(ERC20MintableToken.address);
+
+        await IncomeContractMock.connect(owner).addRecipient(accountOne.address);
+        await IncomeContractMock.connect(owner).addRecipient(accountTwo.address);
+        await ERC20MintableToken.connect(owner).mint(IncomeContractMock.address, TEN.mul(TENIN18));
+        await IncomeContractMock.connect(owner).addManager(accountOne.address, accountFive.address);
+        await IncomeContractMock.connect(owner).addManager(accountTwo.address, accountFive.address);
+        
+        await expect(
+            IncomeContractMock.connect(accountNine).addManager(accountFourth.address, accountFive.address)
+        ).to.be.revertedWith("Ownable: caller is not the owner");
+            
+
+        let blockNumber = await ethers.provider.getBlockNumber();
+        let block = await ethers.provider.getBlock(blockNumber);
+        let timeNow = block.timestamp;
+        
+        let t = [];
+        t.push({
+            amount: EIGHT.mul(TENIN18), 
+            untilTime: timeNow+1*60*60, 
+            gradual: false
+        });
+
+        await IncomeContractMock.connect(owner).setLockup(accountOne.address, t);
+        await IncomeContractMock.connect(owner).setLockup(accountTwo.address, t);
+        
+        // pass 1 hour
+        await passTime(1*60*60);
+         
+        await IncomeContractMock.connect(accountFive).pay(accountOne.address, EIGHT.mul(TENIN18));
+
+        await IncomeContractMock.connect(accountFive).pay(accountTwo.address, EIGHT.mul(TENIN18));
+
+        await IncomeContractMock.connect(accountOne).claim();
+
+        await expect(
+            IncomeContractMock.connect(accountTwo).claim()
+        ).to.be.revertedWith("There are no enough funds at contract");
+
+        await ERC20MintableToken.connect(owner).mint(IncomeContractMock.address, SIX.mul(TENIN18));
+        
+        let balanceIncomeContractMockBefore = await ERC20MintableToken.balanceOf(IncomeContractMock.address);
+        let balanceAccountTwoBefore = await ERC20MintableToken.balanceOf(accountTwo.address);
+
+        // now recipient can claim
+        await IncomeContractMock.connect(accountTwo).claim();
+
+
+        let balanceAccountTwoAfter = await ERC20MintableToken.balanceOf(accountTwo.address);
+        let balanceIncomeContractMockAfter = await ERC20MintableToken.balanceOf(IncomeContractMock.address);
+
+        //'Balance accountOne wrong after claim'
+        expect(balanceAccountTwoBefore.add(EIGHT.mul(TENIN18))).to.be.eq(balanceAccountTwoAfter);
+        
+        // 'Balance at Contract wrong after claim'
+        expect(balanceIncomeContractMockBefore).to.be.eq(balanceIncomeContractMockAfter.add(EIGHT.mul(TENIN18)));
+    });
 
 });
 
-    
-    
-//     it('test error enough funds. adding and clamin afterwards ', async () => {
-//         var ERC20MintableToken = await ERC20MintableToken.new('t2','t2', {from: accountTen});
-//         var IncomeContractMock = await IncomeContractMock.new({from: accountTen});
-//         await IncomeContractMock.__IncomeContract_init(ERC20MintableToken.address, {from: accountTen});
-        
-//         await IncomeContractMock.addRecipient(accountOne, {from: accountTen});
-//         await IncomeContractMock.addRecipient(accountTwo, {from: accountTen});
-//         await ERC20MintableToken.mint(IncomeContractMock.address, '0x'+(10*oneEther).toString(16), { from: accountTen});
-//         await IncomeContractMock.addManager(accountOne, accountFive, { from: accountTen});
-//         await IncomeContractMock.addManager(accountTwo, accountFive, { from: accountTen});
-        
-//         await expect(
-//             IncomeContractMock.addManager(accountFourth,accountFive),
-//             "Ownable: caller is not the owner"
-//         );
-        
-//         //let timeNow = parseInt(new Date().getTime()/1000);
-//         let block = await web3.eth.getBlock("latest");
-//         let timeNow = block.timestamp;
-        
-//         let t = [];
-//         t.push({
-//             amount: '0x'+(8*oneEther).toString(16), 
-//             untilTime: timeNow+1*60*60, 
-//             gradual: false
-//         });
-
-//         await IncomeContractMock.setLockup(accountOne, t, { from: accountTen});
-//         await IncomeContractMock.setLockup(accountTwo, t, { from: accountTen});
-        
-//         // pass 1 hour
-//         advanceTimeAndBlock(1*60*60);
-        
-//         await IncomeContractMock.pay(accountOne, '0x'+(8*oneEther).toString(16), { from: accountFive});
-//         await IncomeContractMock.pay(accountTwo, '0x'+(8*oneEther).toString(16), { from: accountFive});
-        
-//         await IncomeContractMock.claim({ from: accountOne});
-        
-//         await expect(
-//             IncomeContractMock.claim({ from: accountTwo}),
-//             "There are no enough funds at contract"
-//         );
-        
-//         await ERC20MintableToken.mint(IncomeContractMock.address, '0x'+(6*oneEther).toString(16), { from: accountTen});
-        
-        
-//         let balanceIncomeContractMockBefore = (await ERC20MintableToken.balanceOf.call(IncomeContractMock.address));
-//         let balanceAccountTwoBefore = (await ERC20MintableToken.balanceOf.call(accountTwo));
-
-//         // now recipient can claim
-//         await IncomeContractMock.claim({ from: accountTwo});
-
-//         let balanceAccountTwoAfter = (await ERC20MintableToken.balanceOf.call(accountTwo));
-//         let balanceIncomeContractMockAfter = (await ERC20MintableToken.balanceOf.call(IncomeContractMock.address));    
-        
-//         assert.equal(
-//             (
-//                 BigNumber(parseInt(balanceAccountTwoBefore))
-//                 .plus(BigNumber(parseInt(8*oneEther)))
-//             ).toString(16),
-//             (
-//                 BigNumber(parseInt(balanceAccountTwoAfter))
-//             ).toString(16),
-//             'Balance accountOne wrong after claim'
-//         );
-        
-//         assert.equal(
-//             (
-//                 BigNumber(parseInt(balanceIncomeContractMockBefore))
-                
-//             ).toString(16),
-//             (
-//                 BigNumber(parseInt(balanceIncomeContractMockAfter))
-//                 .plus(BigNumber(parseInt(8*oneEther)))
-//             ).toString(16),
-//             'Balance at Contract wrong after claim'
-//         );
-        
-//     });
-    
-// });
