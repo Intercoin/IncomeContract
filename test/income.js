@@ -25,7 +25,7 @@ const FRACTION = BigNumber.from('100000');
 chai.use(require('chai-bignumber')());
 
 
-var  passTime = async(seconds) => {
+var passTime = async(seconds) => {
     if (typeof(seconds) === 'undefined') {
         seconds = 1*60*60; // one hour
     } else {
@@ -158,8 +158,7 @@ describe("income",  async() => {
         ).to.be.revertedWith("Amount exceeds available unlocked balance");
 
         // pass another 1 hour
-        await ethers.provider.send('evm_increaseTime', [1*60*60]);
-        await ethers.provider.send('evm_mine');
+        passTime(1*60*60);
         
         // now available to pay another 2eth
         // manager want to pay all eth (4eth). but reverts
@@ -171,8 +170,7 @@ describe("income",  async() => {
         await IncomeContractMock.connect(accountFive).pay(accountOne.address, TWO.mul(TENIN18))
         
         // pass last 1 hour
-        await ethers.provider.send('evm_increaseTime', [1*60*60]);
-        await ethers.provider.send('evm_mine');
+        passTime(1*60*60);
         
         // now for recipient avaialble 4 eth
        
