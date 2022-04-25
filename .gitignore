@@ -3,3 +3,5 @@
 artifacts
 .env
 .deps
+/bin
+/cache
