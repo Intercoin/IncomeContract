@@ -67,6 +67,7 @@ describe("IncomeContractUBI",  async() => {
     var ERC20TokenFactory, IncomeContractUBIMockFactory, CommunityMockFactory;
     var IncomeContractUBIMockInstance, ERC20MintableToken, CommunityMockInstance;
 
+    
     beforeEach("deploying", async() => {
         IncomeContractUBIMockFactory = await ethers.getContractFactory("IncomeContractUBIMock");
         ERC20TokenFactory = await ethers.getContractFactory("ERC20Mintable");
@@ -77,7 +78,6 @@ describe("IncomeContractUBI",  async() => {
         CommunityMockInstance = await CommunityMockFactory.connect(owner).deploy();
     });
 
-  
     for ( const ETHMode of [true, false]) {
     it("tests simple lifecycle ("+(ETHMode ? "ETH" : "ERC20")+")", async() => {
 
@@ -241,6 +241,7 @@ describe("IncomeContractUBI",  async() => {
     });
     }
     
+    
   
     it('test UBI(short)', async () => {
         let avg1,avg2,avg3,tmp,tmp1,balanceAccountTwoBefore,balanceAccountTwoAfter,avgRatio,ubiVal;
@@ -278,6 +279,9 @@ describe("IncomeContractUBI",  async() => {
         avgRatio = 0.429
         ubiVal = ONE.mul(TENIN18).mul(429).div(1000);
         //---------------------------------------
+
+        // make first actualize ubi
+        await IncomeContractUBIMockInstance.connect(accountFive)["actualizeUBI()"]();
 
         // pass 1 day = 86400 seconds. 
         passTime(24*60*60);
