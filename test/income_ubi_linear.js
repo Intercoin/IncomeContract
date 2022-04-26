@@ -22,8 +22,9 @@ const TENIN18 = TEN.pow(BigNumber.from('18'));
 
 const FRACTION = BigNumber.from('100000');
 const RATE_MULTIPLIER = BigNumber.from('1000000');
-const MEMBERSROLE= 'members';
-const UBIROLE = 'members'
+const UBIROLE = 'members';
+const UBIQuantity = THREE;
+const UBIPeriod = 3*60*60; // 3 hours
 
 chai.use(require('chai-bignumber')());
 
@@ -39,7 +40,7 @@ var passTime = async(seconds) => {
     await ethers.provider.send('evm_mine');
 }
 
-describe("IncomeContractUBI",  async() => {
+describe("IncomeContractUBILinear",  async() => {
     const accounts = waffle.provider.getWallets();
 
     // Setup accounts.
