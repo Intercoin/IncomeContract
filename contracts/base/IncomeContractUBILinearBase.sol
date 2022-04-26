@@ -9,12 +9,13 @@ import "../lib/DateTime.sol";
 import "../interfaces/IUBILinear.sol";
 import "../interfaces/ICommunity.sol";
 
-import "../IncomeContract.sol";
+import "./IncomeContractBase.sol";
+import "./UBIBase.sol";
 
-abstract contract IncomeContractUBILinearBase is IUBILinear, IncomeContractBase {
+//import "hardhat/console.sol";
+
+abstract contract IncomeContractUBILinearBase is IUBILinear, IncomeContractBase, UBIBase {
     using DateTime for uint256;
-
-    uint256 constant multiplier = 1e6;
 
     struct UBIStruct {
         uint256 lastIndex;
@@ -34,11 +35,9 @@ abstract contract IncomeContractUBILinearBase is IUBILinear, IncomeContractBase 
 
     mapping(address => UBIStruct) users;
 
-    modifier canObtainUBI() {
+    function canObtainUBI() internal view override {
         bool s = _canRecord(ubiRoleName);
-        
         require(s == true, "Sender has not in accessible List");
-        _;
     }
 
     function __IncomeContractUBILinearBase_init(
@@ -70,55 +69,60 @@ abstract contract IncomeContractUBILinearBase is IUBILinear, IncomeContractBase 
         uint256 lastIndex = users[msg.sender].lastIndex;
         uint256 payed = users[msg.sender].payed;
         uint256 total = users[msg.sender].total;
-        
+
         if (users[msg.sender].exists == false) {
             lastIndex = startDateIndex;
         }
-       
+        
         uint256 untilIndex = getCurrentDateIndex(); //.add(DAY_IN_SECONDS);
+
         for (uint256 i = lastIndex; i < untilIndex; i = i + ubiPeriod) {
             total = total + ubiQuantity;
             lastIndex = i + ubiPeriod;
             
         }
-        ubi =  (total - payed) / multiplier;
-
+        ubi = total - payed;
     }
     
     function claimUBI(
     ) 
         public 
         override 
-        canObtainUBI()
+        
     {
-        _actualizeUBI();
+        canObtainUBI();
+        _actualizeUBI(msg.sender);
         uint256 toPay = users[msg.sender].total - users[msg.sender].payed;
-        require(toPay / multiplier > 0, "Amount exceeds balance available to claim");
+        require(toPay > 0, "Amount exceeds balance available to claim");
         users[msg.sender].payed = users[msg.sender].payed + toPay;
-        bool success = _claim(msg.sender, toPay / multiplier);
+        bool success = _claim(msg.sender, toPay);
         require(success == true, "There are no enough funds at contract");
         
     }
-    
+   
     function _actualizeUBI(
+        address account
     ) 
         internal 
-        
+        override
         returns(uint256 ubi) 
     {
-        if (users[msg.sender].exists == false) {
-            users[msg.sender].lastIndex = startDateIndex;
-            users[msg.sender].payed = 0;
-            users[msg.sender].total = 0;
-            users[msg.sender].exists = true;
+
+        if (users[account].exists == false) {
+            users[account].lastIndex = startDateIndex;
+            users[account].payed = 0;
+            users[account].total = 0;
+            users[account].exists = true;
         }
         
         uint256 untilIndex = getCurrentDateIndex(); //.add(DAY_IN_SECONDS);
-        for (uint256 i=users[msg.sender].lastIndex; i<untilIndex; i = i + ubiPeriod) {
-            users[msg.sender].total = users[msg.sender].total + ubiQuantity;
-            users[msg.sender].lastIndex = i + ubiPeriod;
+
+        for (uint256 i = users[account].lastIndex; i < untilIndex; i = i + ubiPeriod) {
+            users[account].total += ubiQuantity;
+            users[account].lastIndex += ubiPeriod;
+
         }
-        ubi =  (users[msg.sender].total - users[msg.sender].payed) / multiplier;
+        ubi = users[account].total - users[account].payed;
     }
 
     function getCurrentDateIndex(
@@ -127,10 +131,14 @@ abstract contract IncomeContractUBILinearBase is IUBILinear, IncomeContractBase 
         view 
         returns(uint256 dateIndex) 
     {
+
         uint256 y = (block.timestamp).getYear();
         uint256 m = (block.timestamp).getMonth();
         uint256 d = (block.timestamp).getDay();
-        dateIndex = (uint256(y)).toTimestamp(uint256(m),uint256(d));
+        uint256 h = (block.timestamp).getHour();
+        uint256 min = (block.timestamp).getMinute();
+        uint256 s = (block.timestamp).getMinute();
+        dateIndex = DateTime.toTimestamp(y, m, d, h, min, s);
     }
 
     function _canRecord(string memory roleName) private view returns(bool s){

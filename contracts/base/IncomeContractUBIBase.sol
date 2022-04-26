@@ -10,8 +10,9 @@ import "../interfaces/IUBI.sol";
 import "../interfaces/ICommunity.sol";
 
 import "../IncomeContract.sol";
+import "./UBIBase.sol";
 
-abstract contract IncomeContractUBIBase is IUBI, IncomeContractBase {
+abstract contract IncomeContractUBIBase is IUBI, IncomeContractBase, UBIBase {
     
     ICommunity private communityAddress;
     string private communityRole;
@@ -64,11 +65,10 @@ abstract contract IncomeContractUBIBase is IUBI, IncomeContractBase {
         require(s == true, "Sender has not in accessible List");
         _;
     }
-    modifier canObtainUBI() {
+    
+    function canObtainUBI() internal view override {
         bool s = _canRecord(communityUBIRole);
-        
         require(s == true, "Sender has not in accessible List");
-        _;
     }
    
 
@@ -194,9 +194,9 @@ abstract contract IncomeContractUBIBase is IUBI, IncomeContractBase {
     ) 
         public 
         override 
-        canObtainUBI()
     {
-        _actualizeUBI();
+        canObtainUBI();
+        _actualizeUBI(msg.sender);
         uint256 toPay = users[msg.sender].total - users[msg.sender].payed;
         require(toPay / multiplier > 0, "Amount exceeds balance available to claim");
         users[msg.sender].payed = users[msg.sender].payed + toPay;
@@ -206,30 +206,31 @@ abstract contract IncomeContractUBIBase is IUBI, IncomeContractBase {
     }
     
     function _actualizeUBI(
+        address account
     ) 
         internal 
-        
+        override
         returns(uint256 ubi) 
     {
-        if (users[msg.sender].exists == false) {
-            users[msg.sender].lastIndex = startDateIndex;
-            users[msg.sender].payed = 0;
-            users[msg.sender].total = 0;
-            users[msg.sender].prevUBI = 0;
-            users[msg.sender].exists = true;
+        if (users[account].exists == false) {
+            users[account].lastIndex = startDateIndex;
+            users[account].payed = 0;
+            users[account].total = 0;
+            users[account].prevUBI = 0;
+            users[account].exists = true;
         }
         
         uint256 untilIndex = getCurrentDateIndex(); //.add(DAY_IN_SECONDS);
-        for (uint256 i=users[msg.sender].lastIndex; i<untilIndex; i=i+DateTime.DAY_IN_SECONDS) {
+        for (uint256 i=users[account].lastIndex; i<untilIndex; i=i+DateTime.DAY_IN_SECONDS) {
             if (UBIValues[i] == 0) {
             } else {
-                users[msg.sender].prevUBI = UBIValues[i];
+                users[account].prevUBI = UBIValues[i];
             }
-            users[msg.sender].total = users[msg.sender].total + users[msg.sender].prevUBI;
-            users[msg.sender].lastIndex = i + DateTime.DAY_IN_SECONDS;
+            users[account].total = users[account].total + users[account].prevUBI;
+            users[account].lastIndex = i + DateTime.DAY_IN_SECONDS;
             
         }
-        ubi =  (users[msg.sender].total - users[msg.sender].payed) / multiplier;
+        ubi =  (users[account].total - users[account].payed) / multiplier;
 
     }
     

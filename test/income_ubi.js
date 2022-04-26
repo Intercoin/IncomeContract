@@ -280,6 +280,9 @@ describe("IncomeContractUBI",  async() => {
         ubiVal = ONE.mul(TENIN18).mul(429).div(1000);
         //---------------------------------------
 
+        // make first actualize ubi
+        await IncomeContractUBIMockInstance.connect(accountFive)["actualizeUBI()"]();
+
         // pass 1 day = 86400 seconds. 
         passTime(24*60*60);
 
