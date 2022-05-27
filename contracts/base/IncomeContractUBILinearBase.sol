@@ -9,7 +9,7 @@ import "../lib/DateTime.sol";
 import "../interfaces/IUBILinear.sol";
 import "../interfaces/ICommunity.sol";
 
-import "./IncomeContractBase.sol";
+import "../base/IncomeContractBase.sol";
 import "./UBIBase.sol";
 
 //import "hardhat/console.sol";
@@ -42,7 +42,7 @@ abstract contract IncomeContractUBILinearBase is IUBILinear, IncomeContractBase,
 
     function __IncomeContractUBILinearBase_init(
         address token_, // can be address(0) = 0x0000000000000000000000000000000000000000   mean   ETH
-        ICommunity community_,
+        address community_,
         string memory ubiRoleName_,
         uint256 ubiQuantity_, 
         uint256 ubiPeriod_
@@ -51,7 +51,7 @@ abstract contract IncomeContractUBILinearBase is IUBILinear, IncomeContractBase,
         onlyInitializing
     {
         __IncomeContract_init(token_);
-        community = community_;
+        community = ICommunity(community_);
         ubiRoleName = ubiRoleName_;
         ubiQuantity = ubiQuantity_;
         ubiPeriod = ubiPeriod_;

@@ -3,8 +3,9 @@ pragma solidity ^0.8.11;
 pragma experimental ABIEncoderV2;
 
 import "./base/IncomeContractUBILinearBase.sol";
+import "./interfaces/IIncomeContractUBILinear.sol";
 
-contract IncomeContractUBILinear is IncomeContractUBILinearBase {
+contract IncomeContractUBILinear is IncomeContractUBILinearBase, IIncomeContractUBILinear {
     
     /**
      * @param token_ token address of eth
@@ -15,7 +16,7 @@ contract IncomeContractUBILinear is IncomeContractUBILinearBase {
      */
     function init(
         address token_,
-        ICommunity community_,
+        address community_,
         string memory ubiRoleName_,
         uint256 ubiQuantity_, 
         uint256 ubiPeriod_

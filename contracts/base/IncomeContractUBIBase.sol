@@ -9,7 +9,7 @@ import "../lib/DateTime.sol";
 import "../interfaces/IUBI.sol";
 import "../interfaces/ICommunity.sol";
 
-import "../IncomeContract.sol";
+import "../base/IncomeContractBase.sol";
 import "./UBIBase.sol";
 
 abstract contract IncomeContractUBIBase is IUBI, IncomeContractBase, UBIBase {
@@ -27,7 +27,7 @@ abstract contract IncomeContractUBIBase is IUBI, IncomeContractBase, UBIBase {
     uint256 private startDateIndex;
     
     
-    uint256 private tagsIndex = 1;
+    uint256 private tagsIndex;
     mapping (bytes32 => uint256) internal _tags;
     mapping (uint256 => bytes32) internal _tagsIndices;
     
@@ -74,20 +74,23 @@ abstract contract IncomeContractUBIBase is IUBI, IncomeContractBase, UBIBase {
 
     function __IncomeContractUBI_init(
         address token, // can be address(0) = 0x0000000000000000000000000000000000000000   mean   ETH
-        ICommunity community,
+        address community,
         string memory roleName,
         string memory ubiRoleName
     )  
         internal
         onlyInitializing
     {
+        tagsIndex = 1;
         __IncomeContract_init(token);
 
-        communityAddress = community;
+        communityAddress = ICommunity(community);
         communityRole = roleName;
         communityUBIRole = ubiRoleName;
         
         startDateIndex = getCurrentDateIndex();
+
+        
     }
     
     function getRatioMultiplier() public pure returns(uint256) {

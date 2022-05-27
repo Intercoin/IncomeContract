@@ -50,17 +50,41 @@ describe("income",  async() => {
     var ERC20TokenFactory, IncomeContractMockFactory;
     var IncomeContractMock, ERC20MintableToken;
     beforeEach("deploying", async() => {
-        IncomeContractMockFactory = await ethers.getContractFactory("IncomeContractMock");
+        
         ERC20TokenFactory = await ethers.getContractFactory("ERC20Mintable");
-
-        IncomeContractMock = await IncomeContractMockFactory.connect(owner).deploy();
         ERC20MintableToken = await ERC20TokenFactory.connect(owner).deploy('t2','t2');
+
+        /// IncomeContractFactory
+        IncomeContractFactoryFactory = await ethers.getContractFactory("IncomeContractFactory");
+        IncomeContractMockFactory = await ethers.getContractFactory("IncomeContractMock");
+        IncomeContractUBIMockFactory = await ethers.getContractFactory("IncomeContractUBIMock");
+        IncomeContractUBILinearFactory = await ethers.getContractFactory("IncomeContractUBILinear");
+         
+        IncomeContractMock = await IncomeContractMockFactory.connect(owner).deploy();
+        IncomeContractUBIMockInstance = await IncomeContractUBIMockFactory.connect(owner).deploy();
+        IncomeContractUBILinearInstance = await IncomeContractUBILinearFactory.connect(owner).deploy();
+
+        IncomeContractFactory = await IncomeContractFactoryFactory.connect(owner).deploy(
+            IncomeContractMock.address,
+            IncomeContractUBIMockInstance.address,
+            IncomeContractUBILinearInstance.address
+        );
+        //-----------------
     });
-
+    for ( const FactoryMode of [true, false]) {
+    
     for ( const ETHMode of [true, false]) {
-    it("tests simple lifecycle ("+(ETHMode ? "ETH" : "ERC20")+")", async() => {
+    it(""+(FactoryMode ? "Factory " : "")+"tests simple lifecycle ("+(ETHMode ? "ETH" : "ERC20")+")", async() => {
+        if (FactoryMode == true) {
+            let tx = await IncomeContractFactory.connect(owner)["produce(address)"]((ETHMode) ? ZERO_ADDRESS : ERC20MintableToken.address);
+            const rc = await tx.wait(); // 0ms, as tx is already confirmed
+            const event = rc.events.find(event => event.event === 'InstanceCreated');
+            const [instance,] = event.args;
 
-        await IncomeContractMock.connect(owner).init((ETHMode) ? ZERO_ADDRESS : ERC20MintableToken.address);
+            IncomeContractMock = await ethers.getContractAt("IncomeContractMock",instance);
+        } else {
+            await IncomeContractMock.connect(owner).init((ETHMode) ? ZERO_ADDRESS : ERC20MintableToken.address);
+        }
 
         await expect(
             IncomeContractMock.connect(accountFive).addRecipient(accountOne.address)
@@ -216,10 +240,17 @@ describe("income",  async() => {
     }
     
     
-    it('test error enough funds. adding and clamin afterwards ', async () => {
-        
-        await IncomeContractMock.connect(owner).init(ERC20MintableToken.address);
+    it(""+(FactoryMode ? "Factory " : "")+'test error enough funds. adding and clamin afterwards ', async () => {
+        if (FactoryMode == true) {
+            let tx = await IncomeContractFactory.connect(owner)["produce(address)"](ERC20MintableToken.address);
+            const rc = await tx.wait(); // 0ms, as tx is already confirmed
+            const event = rc.events.find(event => event.event === 'InstanceCreated');
+            const [instance,] = event.args;
 
+            IncomeContractMock = await ethers.getContractAt("IncomeContractMock",instance);
+        } else {
+            await IncomeContractMock.connect(owner).init(ERC20MintableToken.address);
+        }
         await IncomeContractMock.connect(owner).addRecipient(accountOne.address);
         await IncomeContractMock.connect(owner).addRecipient(accountTwo.address);
         await ERC20MintableToken.connect(owner).mint(IncomeContractMock.address, TEN.mul(TENIN18));
@@ -276,6 +307,6 @@ describe("income",  async() => {
         // 'Balance at Contract wrong after claim'
         expect(balanceIncomeContractMockBefore).to.be.eq(balanceIncomeContractMockAfter.add(EIGHT.mul(TENIN18)));
     });
-
+    }
 });
 

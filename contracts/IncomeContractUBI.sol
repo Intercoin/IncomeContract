@@ -3,8 +3,9 @@ pragma solidity ^0.8.11;
 pragma experimental ABIEncoderV2;
 
 import "./base/IncomeContractUBIBase.sol";
+import "./interfaces/IIncomeContractUBI.sol";
 
-contract IncomeContractUBI is IncomeContractUBIBase {
+contract IncomeContractUBI is IncomeContractUBIBase, IIncomeContractUBI {
     
     /**
      * @param token  token address of eth
@@ -14,7 +15,7 @@ contract IncomeContractUBI is IncomeContractUBIBase {
      */
     function init(
         address token, // can be address(0) = 0x0000000000000000000000000000000000000000   mean   ETH
-        ICommunity community,
+        address community,
         string memory roleName,
         string memory ubiRoleName
     )

@@ -71,26 +71,56 @@ describe("IncomeContractUBILinear",  async() => {
 
     
     beforeEach("deploying", async() => {
-        IncomeContractUBILinearFactory = await ethers.getContractFactory("IncomeContractUBILinear");
         ERC20TokenFactory = await ethers.getContractFactory("ERC20Mintable");
         CommunityMockFactory = await ethers.getContractFactory("CommunityMock");
 
-        IncomeContractUBILinearInstance = await IncomeContractUBILinearFactory.connect(owner).deploy();
         ERC20MintableToken = await ERC20TokenFactory.connect(owner).deploy('t2','t2');
         CommunityMockInstance = await CommunityMockFactory.connect(owner).deploy();
+
+        /// IncomeContractFactory
+        IncomeContractFactoryFactory = await ethers.getContractFactory("IncomeContractFactory");
+        IncomeContractMockFactory = await ethers.getContractFactory("IncomeContractMock");
+        IncomeContractUBIMockFactory = await ethers.getContractFactory("IncomeContractUBIMock");
+        IncomeContractUBILinearFactory = await ethers.getContractFactory("IncomeContractUBILinear");
+         
+        IncomeContractMock = await IncomeContractMockFactory.connect(owner).deploy();
+        IncomeContractUBIMockInstance = await IncomeContractUBIMockFactory.connect(owner).deploy();
+        IncomeContractUBILinearInstance = await IncomeContractUBILinearFactory.connect(owner).deploy();
+
+        IncomeContractFactory = await IncomeContractFactoryFactory.connect(owner).deploy(
+            IncomeContractMock.address,
+            IncomeContractUBIMockInstance.address,
+            IncomeContractUBILinearInstance.address
+        );
+        //-----------------
     });
+    for ( const FactoryMode of [true, false]) {
 
     for ( const ETHMode of [true, false]) {
     it("tests simple lifecycle ("+(ETHMode ? "ETH" : "ERC20")+")", async() => {
+        if (FactoryMode == true) {
+            let tx = await IncomeContractFactory.connect(owner)["produce(address,address,string,uint256,uint256)"](
+                (ETHMode) ? ZERO_ADDRESS : ERC20MintableToken.address, 
+                CommunityMockInstance.address, 
+                UBIROLE,
+                UBIQuantity,
+                UBIPeriod
+            );
+            const rc = await tx.wait(); // 0ms, as tx is already confirmed
+            const event = rc.events.find(event => event.event === 'InstanceCreated');
+            const [instance,] = event.args;
 
-        await IncomeContractUBILinearInstance.connect(owner).init(
-            (ETHMode) ? ZERO_ADDRESS : ERC20MintableToken.address, 
-            CommunityMockInstance.address, 
-            UBIROLE,
-            UBIQuantity,
-            UBIPeriod
-        );
-
+            IncomeContractUBILinearInstance = await ethers.getContractAt("IncomeContractUBILinear",instance);
+        } else {
+        
+            await IncomeContractUBILinearInstance.connect(owner).init(
+                (ETHMode) ? ZERO_ADDRESS : ERC20MintableToken.address, 
+                CommunityMockInstance.address, 
+                UBIROLE,
+                UBIQuantity,
+                UBIPeriod
+            );
+        }
         await expect(
             IncomeContractUBILinearInstance.connect(accountFive).addRecipient(accountOne.address)
         ).to.be.revertedWith("Ownable: caller is not the owner");
@@ -246,15 +276,29 @@ describe("IncomeContractUBILinear",  async() => {
   
     it('test UBI(short)', async () => {
         let avg1,avg2,avg3,tmp,tmp1,balanceAccountTwoBefore,balanceAccountTwoAfter,avgRatio,ubiVal,timePassed;
+        if (FactoryMode == true) {
+            let tx = await IncomeContractFactory.connect(owner)["produce(address,address,string,uint256,uint256)"](
+                ERC20MintableToken.address, 
+                CommunityMockInstance.address, 
+                UBIROLE,
+                UBIQuantity,
+                UBIPeriod
+            );
+            const rc = await tx.wait(); // 0ms, as tx is already confirmed
+            const event = rc.events.find(event => event.event === 'InstanceCreated');
+            const [instance,] = event.args;
 
-        await IncomeContractUBILinearInstance.connect(owner).init(
-            ERC20MintableToken.address, 
-            CommunityMockInstance.address, 
-            UBIROLE,
-            UBIQuantity,
-            UBIPeriod
-        );
-
+            IncomeContractUBILinearInstance = await ethers.getContractAt("IncomeContractUBILinear",instance);
+        } else {
+        
+            await IncomeContractUBILinearInstance.connect(owner).init(
+                ERC20MintableToken.address, 
+                CommunityMockInstance.address, 
+                UBIROLE,
+                UBIQuantity,
+                UBIPeriod
+            );
+        }
         await ERC20MintableToken.connect(owner).mint(IncomeContractUBILinearInstance.address, TEN.mul(TENIN18));
 
         let SomeExternalContractMockFactory = await ethers.getContractFactory("SomeExternalContractMock");
@@ -328,5 +372,5 @@ describe("IncomeContractUBILinear",  async() => {
         ).to.be.revertedWith("There are no enough funds at contract");
         
     });
-      
+    }      
 });
