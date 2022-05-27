@@ -3,8 +3,9 @@ pragma solidity ^0.8.11;
 pragma experimental ABIEncoderV2;
 
 import "./base/IncomeContractBase.sol";
+import "./interfaces/IIncomeContract.sol";
 
-contract IncomeContract is IncomeContractBase {
+contract IncomeContract is IncomeContractBase, IIncomeContract {
 
     function init(
         address token // can be address(0) = 0x0000000000000000000000000000000000000000   mean   ETH
