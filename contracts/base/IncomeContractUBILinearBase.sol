@@ -66,11 +66,12 @@ abstract contract IncomeContractUBILinearBase is IUBILinear, IncomeContractBase,
         override 
         returns(uint256 ubi) 
     {
-        uint256 lastIndex = users[msg.sender].lastIndex;
-        uint256 payed = users[msg.sender].payed;
-        uint256 total = users[msg.sender].total;
+        address sender = _msgSender();
+        uint256 lastIndex = users[sender].lastIndex;
+        uint256 payed = users[sender].payed;
+        uint256 total = users[sender].total;
 
-        if (users[msg.sender].exists == false) {
+        if (users[sender].exists == false) {
             lastIndex = startDateIndex;
         }
         
@@ -91,11 +92,12 @@ abstract contract IncomeContractUBILinearBase is IUBILinear, IncomeContractBase,
         
     {
         canObtainUBI();
-        _actualizeUBI(msg.sender);
-        uint256 toPay = users[msg.sender].total - users[msg.sender].payed;
+        address sender = _msgSender();
+        _actualizeUBI(sender);
+        uint256 toPay = users[sender].total - users[sender].payed;
         require(toPay > 0, "Amount exceeds balance available to claim");
-        users[msg.sender].payed = users[msg.sender].payed + toPay;
-        bool success = _claim(msg.sender, toPay);
+        users[sender].payed = users[sender].payed + toPay;
+        bool success = _claim(sender, toPay);
         require(success == true, "There are no enough funds at contract");
         
     }
@@ -143,7 +145,7 @@ abstract contract IncomeContractUBILinearBase is IUBILinear, IncomeContractBase,
 
     function _canRecord(string memory roleName) private view returns(bool s){
         s = false;
-        string[] memory roles = ICommunity(community).getRoles(msg.sender);
+        string[] memory roles = ICommunity(community).getRoles(_msgSender());
         for (uint256 i=0; i< roles.length; i++) {
             
             if (keccak256(abi.encodePacked(roleName)) == keccak256(abi.encodePacked(roles[i]))) {

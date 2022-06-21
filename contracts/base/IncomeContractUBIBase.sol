@@ -169,13 +169,15 @@ abstract contract IncomeContractUBIBase is IUBI, IncomeContractBase, UBIBase {
         view
         override 
         returns(uint256 ubi) 
-    {
-        uint256 lastIndex = users[msg.sender].lastIndex;
-        uint256 payed = users[msg.sender].payed;
-        uint256 total = users[msg.sender].total;
-        uint256 prevUBI = users[msg.sender].prevUBI;
+    {   
+        address sender = _msgSender();
+
+        uint256 lastIndex = users[sender].lastIndex;
+        uint256 payed = users[sender].payed;
+        uint256 total = users[sender].total;
+        uint256 prevUBI = users[sender].prevUBI;
         
-        if (users[msg.sender].exists == false) {
+        if (users[sender].exists == false) {
             lastIndex = startDateIndex;
         }
        
@@ -198,12 +200,16 @@ abstract contract IncomeContractUBIBase is IUBI, IncomeContractBase, UBIBase {
         public 
         override 
     {
+        
         canObtainUBI();
-        _actualizeUBI(msg.sender);
-        uint256 toPay = users[msg.sender].total - users[msg.sender].payed;
+
+        address sender = _msgSender();
+
+        _actualizeUBI(sender);
+        uint256 toPay = users[sender].total - users[sender].payed;
         require(toPay / multiplier > 0, "Amount exceeds balance available to claim");
-        users[msg.sender].payed = users[msg.sender].payed + toPay;
-        bool success = _claim(msg.sender, toPay / multiplier);
+        users[sender].payed = users[sender].payed + toPay;
+        bool success = _claim(sender, toPay / multiplier);
         require(success == true, "There are no enough funds at contract");
         
     }
@@ -239,7 +245,7 @@ abstract contract IncomeContractUBIBase is IUBI, IncomeContractBase, UBIBase {
     
     function _canRecord(string memory roleName) private view returns(bool s){
         s = false;
-        string[] memory roles = ICommunity(communityAddress).getRoles(msg.sender);
+        string[] memory roles = ICommunity(communityAddress).getRoles(_msgSender());
         for (uint256 i=0; i< roles.length; i++) {
             
             if (keccak256(abi.encodePacked(roleName)) == keccak256(abi.encodePacked(roles[i]))) {
