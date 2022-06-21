@@ -3,6 +3,7 @@ const { BigNumber } = require('ethers');
 const { expect } = require('chai');
 const chai = require('chai');
 const { time } = require('@openzeppelin/test-helpers');
+const mixedCall = require('../js/mixedCall.js');
 
 const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
 const DEAD_ADDRESS = '0x000000000000000000000000000000000000dEaD';
@@ -45,6 +46,7 @@ describe("income",  async() => {
     const accountFourth = accounts[4];
     const accountFive = accounts[5];
     const accountNine = accounts[9];
+    const trustedForwarder = accounts[12];
 
     // vars
     var ERC20TokenFactory, IncomeContractMockFactory;
@@ -71,10 +73,12 @@ describe("income",  async() => {
         );
         //-----------------
     });
+
+    for (const trustedForwardMode of [false,trustedForwarder]) {
     for ( const FactoryMode of [true, false]) {
     
     for ( const ETHMode of [true, false]) {
-    it(""+(FactoryMode ? "Factory " : "")+"tests simple lifecycle ("+(ETHMode ? "ETH" : "ERC20")+")", async() => {
+    it(""+(trustedForwardMode ? '[trusted forwarder]' : '')+(FactoryMode ? "Factory " : "")+"tests simple lifecycle ("+(ETHMode ? "ETH" : "ERC20")+")", async() => {
         if (FactoryMode == true) {
             let tx = await IncomeContractFactory.connect(owner)["produce(address)"]((ETHMode) ? ZERO_ADDRESS : ERC20MintableToken.address);
             const rc = await tx.wait(); // 0ms, as tx is already confirmed
@@ -86,22 +90,23 @@ describe("income",  async() => {
             await IncomeContractMock.connect(owner).init((ETHMode) ? ZERO_ADDRESS : ERC20MintableToken.address);
         }
 
-        await expect(
-            IncomeContractMock.connect(accountFive).addRecipient(accountOne.address)
-        ).to.be.revertedWith("Ownable: caller is not the owner");
+        if (trustedForwardMode) {
+            await IncomeContractMock.connect(owner).setTrustedForwarder(trustedForwarder.address);
+        }
 
-        await IncomeContractMock.connect(owner).addRecipient(accountOne.address);
+        await mixedCall(IncomeContractMock, trustedForwardMode, accountFive, 'addRecipient(address)', [accountOne.address], "Ownable: caller is not the owner");
+
+        await mixedCall(IncomeContractMock, trustedForwardMode, owner, 'addRecipient(address)', [accountOne.address]);
+
         if (ETHMode) {
             await owner.sendTransaction({to: IncomeContractMock.address, value: TEN.mul(TENIN18)});
         } else {
             await ERC20MintableToken.connect(owner).mint(IncomeContractMock.address, TEN.mul(TENIN18));
         }
-                                                  // recipient, manager
-        await IncomeContractMock.connect(owner).addManager(accountOne.address, accountFive.address);
+                                                                                                             // recipient, manager
+        await mixedCall(IncomeContractMock, trustedForwardMode, owner, 'addManager(address,address)', [accountOne.address, accountFive.address]);
 
-        await expect(
-            IncomeContractMock.connect(accountFive).addManager(accountFourth.address, accountFive.address)
-        ).to.be.revertedWith("Ownable: caller is not the owner");
+        await mixedCall(IncomeContractMock, trustedForwardMode, accountFive, 'addManager(address,address)', [accountFourth.address, accountFive.address], "Ownable: caller is not the owner");
 
         let blockNumber = await ethers.provider.getBlockNumber();
         let block = await ethers.provider.getBlock(blockNumber);
@@ -124,28 +129,24 @@ describe("income",  async() => {
             gradual: false
         });
 
-        await IncomeContractMock.connect(owner).setLockup(accountOne.address, t);
+        await mixedCall(IncomeContractMock, trustedForwardMode, owner, 'setLockup(address,(uint256,uint256,bool)[])', [accountOne.address, t]);
         
-        await expect(
-            IncomeContractMock.connect(accountOne).claim()
-        ).to.be.revertedWith("There are no avaialbe amount to claim");
+        await mixedCall(IncomeContractMock, trustedForwardMode, accountOne, 'claim()', [], "There are no available amount to claim");
         
         // pass 1 hour
         await ethers.provider.send('evm_increaseTime', [1*60*60]);
         await ethers.provider.send('evm_mine');
         // reverts  because manager didn't pay yet
-        await expect(
-            IncomeContractMock.connect(accountOne).claim()
-        ).to.be.revertedWith("There are no avaialbe amount to claim");
+        await mixedCall(IncomeContractMock, trustedForwardMode, accountOne, 'claim()', [], "There are no available amount to claim");
 
-        await IncomeContractMock.connect(accountFive).pay(accountOne.address, TWO.mul(TENIN18));
+        await mixedCall(IncomeContractMock, trustedForwardMode, accountFive, 'pay(address,uint256)', [accountOne.address, TWO.mul(TENIN18)]);
 
         let balanceIncomeContractMockBefore = (ETHMode) ? await ethers.provider.getBalance(IncomeContractMock.address) : (await ERC20MintableToken.balanceOf(IncomeContractMock.address));
 
         let balanceAccountOneBefore = (ETHMode) ? await ethers.provider.getBalance(accountOne.address) : (await ERC20MintableToken.balanceOf(accountOne.address));
 
         // now recipient can claim
-        let claimTxObj = await IncomeContractMock.connect(accountOne).claim();
+        let claimTxObj = await mixedCall(IncomeContractMock, trustedForwardMode, accountOne, 'claim()', []);
         let claimTx = await claimTxObj.wait();
 
         let balanceIncomeContractMockAfter = (ETHMode) ? await ethers.provider.getBalance(IncomeContractMock.address) : (await ERC20MintableToken.balanceOf(IncomeContractMock.address));
@@ -156,11 +157,20 @@ describe("income",  async() => {
             balanceAccountOneBefore
                 .add(TWO.mul(TENIN18))
                 .sub(
-                    (ETHMode) 
+                    (trustedForwardMode == false)
                     ?
-                    claimTx.cumulativeGasUsed.mul(claimTx.effectiveGasPrice)
+                    (
+                         (ETHMode) 
+                        ?
+                        claimTx.cumulativeGasUsed.mul(claimTx.effectiveGasPrice)
+                        :
+                        0
+                    )
                     :
-                    0
+                    (
+                        0
+                    )
+                   
 
                 )
         ).to.be.eq(balanceAccountOneAfter);
@@ -172,26 +182,21 @@ describe("income",  async() => {
         
         
         // reverts. recipient already got own 2 eth for first hour
-        await expect(
-            IncomeContractMock.connect(accountOne).claim()
-        ).to.be.revertedWith("There are no avaialbe amount to claim");
+        await mixedCall(IncomeContractMock, trustedForwardMode, accountOne, 'claim()', [], "There are no available amount to claim");
         
         // managers want to pay another 2 eth( for second hour) but reverts. it is not time
-        await expect(
-            IncomeContractMock.connect(accountFive).pay(accountOne.address, TWO.mul(TENIN18))
-        ).to.be.revertedWith("Amount exceeds available unlocked balance");
+        await mixedCall(IncomeContractMock, trustedForwardMode, accountFive, 'pay(address,uint256)', [accountOne.address, TWO.mul(TENIN18)], "Amount exceeds available unlocked balance");
+
 
         // pass another 1 hour
         passTime(1*60*60);
         
         // now available to pay another 2eth
         // manager want to pay all eth (4eth). but reverts
-        await expect(
-            IncomeContractMock.connect(accountFive).pay(accountOne.address, FOURTH.mul(TENIN18))
-        ).to.be.revertedWith("Amount exceeds available unlocked balance");
+        await mixedCall(IncomeContractMock, trustedForwardMode, accountFive, 'pay(address,uint256)', [accountOne.address, FOURTH.mul(TENIN18)], "Amount exceeds available unlocked balance");
         
         // manager pay send 2 eth
-        await IncomeContractMock.connect(accountFive).pay(accountOne.address, TWO.mul(TENIN18))
+        await mixedCall(IncomeContractMock, trustedForwardMode, accountFive, 'pay(address,uint256)', [accountOne.address, TWO.mul(TENIN18)]);
         
         // pass last 1 hour
         passTime(1*60*60);
@@ -199,12 +204,10 @@ describe("income",  async() => {
         // now for recipient avaialble 4 eth
        
         // manager want to pay 4 eth, but 2eth of them he has already payed before. so reverts
-        await expect(
-            IncomeContractMock.connect(accountFive).pay(accountOne.address, FOURTH.mul(TENIN18))
-        ).to.be.revertedWith("Amount exceeds available allowed balance by manager");
+        await mixedCall(IncomeContractMock, trustedForwardMode, accountFive, 'pay(address,uint256)', [accountOne.address, FOURTH.mul(TENIN18)], "Amount exceeds available allowed balance by manager");
         
         // so pay only 2 eth left
-        await IncomeContractMock.connect(accountFive).pay(accountOne.address, TWO.mul(TENIN18))
+        await mixedCall(IncomeContractMock, trustedForwardMode, accountFive, 'pay(address,uint256)', [accountOne.address, TWO.mul(TENIN18)]);
         
         // recipient want to claim 4 eth
         
@@ -212,7 +215,7 @@ describe("income",  async() => {
         let balanceAccountOneBefore2 = (ETHMode) ? await ethers.provider.getBalance(accountOne.address) : (await ERC20MintableToken.balanceOf(accountOne.address));
 
         // now recipient can claim
-        let claimTxObj2 = await IncomeContractMock.connect(accountOne).claim();
+        let claimTxObj2 = await mixedCall(IncomeContractMock, trustedForwardMode, accountOne, 'claim()', []);
         let claimTx2 = await claimTxObj2.wait();
 
         let balanceIncomeContractMockAfter2 = (ETHMode) ? await ethers.provider.getBalance(IncomeContractMock.address) : (await ERC20MintableToken.balanceOf(IncomeContractMock.address));
@@ -223,11 +226,19 @@ describe("income",  async() => {
             balanceAccountOneBefore2
                 .add(FOURTH.mul(TENIN18))
                 .sub(
-                    (ETHMode) 
+                    (trustedForwardMode == false)
                     ?
-                    claimTx2.cumulativeGasUsed.mul(claimTx2.effectiveGasPrice)
+                    (
+                         (ETHMode) 
+                        ?
+                        claimTx2.cumulativeGasUsed.mul(claimTx2.effectiveGasPrice)
+                        :
+                        0
+                    )
                     :
-                    0
+                    (
+                        0
+                    )
                 )
         ).to.be.eq(balanceAccountOneAfter2);
 
@@ -240,7 +251,7 @@ describe("income",  async() => {
     }
     
     
-    it(""+(FactoryMode ? "Factory " : "")+'test error enough funds. adding and clamin afterwards ', async () => {
+    it(""+(trustedForwardMode ? '[trusted forwarder]' : '')+(FactoryMode ? "Factory " : "")+'test error enough funds. adding and clamin afterwards ', async () => {
         if (FactoryMode == true) {
             let tx = await IncomeContractFactory.connect(owner)["produce(address)"](ERC20MintableToken.address);
             const rc = await tx.wait(); // 0ms, as tx is already confirmed
@@ -251,16 +262,18 @@ describe("income",  async() => {
         } else {
             await IncomeContractMock.connect(owner).init(ERC20MintableToken.address);
         }
-        await IncomeContractMock.connect(owner).addRecipient(accountOne.address);
-        await IncomeContractMock.connect(owner).addRecipient(accountTwo.address);
+
+        if (trustedForwardMode) {
+            await IncomeContractMock.connect(owner).setTrustedForwarder(trustedForwarder.address);
+        }
+
+        await mixedCall(IncomeContractMock, trustedForwardMode, owner, 'addRecipient(address)', [accountOne.address]);
+        await mixedCall(IncomeContractMock, trustedForwardMode, owner, 'addRecipient(address)', [accountTwo.address]);
         await ERC20MintableToken.connect(owner).mint(IncomeContractMock.address, TEN.mul(TENIN18));
-        await IncomeContractMock.connect(owner).addManager(accountOne.address, accountFive.address);
-        await IncomeContractMock.connect(owner).addManager(accountTwo.address, accountFive.address);
+        await mixedCall(IncomeContractMock, trustedForwardMode, owner, 'addManager(address,address)', [accountOne.address, accountFive.address]);
+        await mixedCall(IncomeContractMock, trustedForwardMode, owner, 'addManager(address,address)', [accountTwo.address, accountFive.address]);
         
-        await expect(
-            IncomeContractMock.connect(accountNine).addManager(accountFourth.address, accountFive.address)
-        ).to.be.revertedWith("Ownable: caller is not the owner");
-            
+        await mixedCall(IncomeContractMock, trustedForwardMode, accountNine, 'addManager(address,address)', [accountFourth.address, accountFive.address], "Ownable: caller is not the owner");
 
         let blockNumber = await ethers.provider.getBlockNumber();
         let block = await ethers.provider.getBlock(blockNumber);
@@ -273,21 +286,18 @@ describe("income",  async() => {
             gradual: false
         });
 
-        await IncomeContractMock.connect(owner).setLockup(accountOne.address, t);
-        await IncomeContractMock.connect(owner).setLockup(accountTwo.address, t);
+        await mixedCall(IncomeContractMock, trustedForwardMode, owner, 'setLockup(address,(uint256,uint256,bool)[])', [accountOne.address, t]);
+        await mixedCall(IncomeContractMock, trustedForwardMode, owner, 'setLockup(address,(uint256,uint256,bool)[])', [accountTwo.address, t]);
         
         // pass 1 hour
         await passTime(1*60*60);
          
-        await IncomeContractMock.connect(accountFive).pay(accountOne.address, EIGHT.mul(TENIN18));
+        await mixedCall(IncomeContractMock, trustedForwardMode, accountFive, 'pay(address,uint256)', [accountOne.address, EIGHT.mul(TENIN18)]);
+        await mixedCall(IncomeContractMock, trustedForwardMode, accountFive, 'pay(address,uint256)', [accountTwo.address, EIGHT.mul(TENIN18)]);
 
-        await IncomeContractMock.connect(accountFive).pay(accountTwo.address, EIGHT.mul(TENIN18));
+        await mixedCall(IncomeContractMock, trustedForwardMode, accountOne, 'claim()', []);
 
-        await IncomeContractMock.connect(accountOne).claim();
-
-        await expect(
-            IncomeContractMock.connect(accountTwo).claim()
-        ).to.be.revertedWith("There are no enough funds at contract");
+        await mixedCall(IncomeContractMock, trustedForwardMode, accountTwo, 'claim()', [], "There are no enough funds at contract");
 
         await ERC20MintableToken.connect(owner).mint(IncomeContractMock.address, SIX.mul(TENIN18));
         
@@ -295,7 +305,7 @@ describe("income",  async() => {
         let balanceAccountTwoBefore = await ERC20MintableToken.balanceOf(accountTwo.address);
 
         // now recipient can claim
-        await IncomeContractMock.connect(accountTwo).claim();
+        await mixedCall(IncomeContractMock, trustedForwardMode, accountTwo, 'claim()', []);
 
 
         let balanceAccountTwoAfter = await ERC20MintableToken.balanceOf(accountTwo.address);
@@ -308,5 +318,40 @@ describe("income",  async() => {
         expect(balanceIncomeContractMockBefore).to.be.eq(balanceIncomeContractMockAfter.add(EIGHT.mul(TENIN18)));
     });
     }
+    }
+
+    describe("TrustedForwarder", function () {
+        var IncomeContractMock;
+        beforeEach("deploying", async() => {
+            let tx = await IncomeContractFactory.connect(owner)["produce(address)"](ERC20MintableToken.address);
+            const rc = await tx.wait(); // 0ms, as tx is already confirmed
+            const event = rc.events.find(event => event.event === 'InstanceCreated');
+            const [instance,] = event.args;
+
+            IncomeContractMock = await ethers.getContractAt("IncomeContractMock",instance);
+        });
+        it("should be empty after init", async() => {
+            expect(await IncomeContractMock.connect(accountOne).isTrustedForwarder(ZERO_ADDRESS)).to.be.true;
+        });
+
+        it("should be setup by owner", async() => {
+            await expect(IncomeContractMock.connect(accountOne).setTrustedForwarder(accountTwo.address)).to.be.revertedWith("Ownable: caller is not the owner");
+            expect(await IncomeContractMock.connect(accountOne).isTrustedForwarder(ZERO_ADDRESS)).to.be.true;
+            await IncomeContractMock.connect(owner).setTrustedForwarder(accountTwo.address);
+            expect(await IncomeContractMock.connect(accountOne).isTrustedForwarder(accountTwo.address)).to.be.true;
+        });
+        
+        it("should drop trusted forward if trusted forward become owner ", async() => {
+            await IncomeContractMock.connect(owner).setTrustedForwarder(accountTwo.address);
+            expect(await IncomeContractMock.connect(accountOne).isTrustedForwarder(accountTwo.address)).to.be.true;
+            await IncomeContractMock.connect(owner).transferOwnership(accountTwo.address);
+            expect(await IncomeContractMock.connect(accountOne).isTrustedForwarder(ZERO_ADDRESS)).to.be.true;
+        });
+
+        it("shouldnt become owner and trusted forwarder", async() => {
+            await expect(IncomeContractMock.connect(owner).setTrustedForwarder(owner.address)).to.be.revertedWith("FORWARDER_CAN_NOT_BE_OWNER");
+        });
+        
+    });
 });
 

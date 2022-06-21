@@ -3,14 +3,15 @@ pragma solidity ^0.8.11;
 pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts-upgradeable/utils/structs/EnumerableSetUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+//import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "../access/TrustedForwarder.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 
 import "../IntercoinTrait.sol";
 
-abstract contract IncomeContractBase is OwnableUpgradeable, ReentrancyGuardUpgradeable, IntercoinTrait {
+abstract contract IncomeContractBase is TrustedForwarder, ReentrancyGuardUpgradeable, IntercoinTrait {
     using EnumerableSetUpgradeable for EnumerableSetUpgradeable.AddressSet;
     
     struct Restrict {
@@ -58,7 +59,7 @@ abstract contract IncomeContractBase is OwnableUpgradeable, ReentrancyGuardUpgra
         internal
         onlyInitializing
     {
-        __Ownable_init();
+        __TrustedForwarder_init();
         __ReentrancyGuard_init();
         
         tokenAddr = token;
@@ -194,7 +195,7 @@ abstract contract IncomeContractBase is OwnableUpgradeable, ReentrancyGuardUpgra
     {
         (,,, uint256 allowedByManager, ) = _viewLockup(_msgSender());
         // 40 20 0 10 => 40 30 0 0
-        require (allowedByManager > 0, "There are no avaialbe amount to claim");
+        require (allowedByManager > 0, "There are no available amount to claim");
 
         recipients[_msgSender()].amountAllowedByManager = 0;
         recipients[_msgSender()].amountPayed = recipients[_msgSender()].amountPayed + allowedByManager;
