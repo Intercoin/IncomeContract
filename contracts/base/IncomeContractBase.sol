@@ -31,12 +31,12 @@ abstract contract IncomeContractBase is TrustedForwarder, ReentrancyGuardUpgrade
     
     
     modifier recipientExists(address recipient) {
-        require(recipients[recipient].exists == true, "There are no such recipient");
+        require(recipients[recipient].exists == true, "NO_SUCH_RECIPIENT");
         _;
     }
     
     modifier canManage(address recipient) {
-        require(recipients[recipient].managers.contains(_msgSender()) == true, "Can not manage such recipient");
+        require(recipients[recipient].managers.contains(_msgSender()) == true, "CANNOT_MANAGE");
         _;
     }
    
@@ -118,7 +118,7 @@ abstract contract IncomeContractBase is TrustedForwarder, ReentrancyGuardUpgrade
             recipients[recipient].amountMax = recipients[recipient].amountMax + restrictions[i].amount;
             
             // adding restriction
-            require(restrictions[i].untilTime > block.timestamp, "untilTime must be more than current time");
+            require(restrictions[i].untilTime > block.timestamp, "untilTime");
             recipients[recipient].restrictions.push(Restrict({
                 amount: restrictions[i].amount,
                 startTime: block.timestamp,
@@ -198,13 +198,13 @@ abstract contract IncomeContractBase is TrustedForwarder, ReentrancyGuardUpgrade
         address ms = _msgSender();
         (,,, uint256 allowedByManager, ) = _viewLockup(ms);
         // 40 20 0 10 => 40 30 0 0
-        require (allowedByManager > 0, "There are no available amount to claim");
+        require (allowedByManager > 0, "NOTHING_AVAILABLE_TO_CLAIM");
 
         recipients[].amountAllowedByManager = 0;
         recipients[ms].amountPaid = recipients[ms].amountPaid + allowedByManager;
         bool success = _claim(ms, allowedByManager);
 
-        require(success == true, "There are no enough funds at contract");
+        require(success == true, "NOT_ENOUGH_FUNDS");
         
     }
     
@@ -231,7 +231,7 @@ abstract contract IncomeContractBase is TrustedForwarder, ReentrancyGuardUpgrade
             uint256 allowedByManager
         )
     {
-        require(recipients[recipient].exists == true, "There are no such recipient");
+        require(recipients[recipient].exists == true, "NO_SUCH_RECIPIENT");
         (maximum, paid, locked,allowedByManager,) = _viewLockup(recipient);
     }
     
