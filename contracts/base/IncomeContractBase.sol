@@ -274,14 +274,21 @@ abstract contract IncomeContractBase is TrustedForwarder, ReentrancyGuardUpgrade
         uint256 fundsPerSecond;
         for (uint256 i = 0; i < restrictions.length; i++ ) {
             if (restrictions[i].untilTime > block.timestamp) {
+                uint32 amount = restrictions[i].amount;
+                if (restrictions[i].fraction > 0) {
+                    uint32 relativeAmount = restrictions[i].fraction * IERC20(tokenAddr).balanceOf(this) / 100000;
+                    if (relativeAmount < amount || amount == 0) {
+                        amount = relativeAmount;
+                    }
+                }
                 if (restrictions[i].gradual == true) {
-                    fundsPerSecond = restrictions[i].amount / (restrictions[i].untilTime - restrictions[i].startTime);
+                    fundsPerSecond = amount / (restrictions[i].untilTime - restrictions[i].startTime);
                     locked = locked + (
                         fundsPerSecond * (restrictions[i].untilTime - block.timestamp)
                     );
                     
                 } else {
-                    locked = locked + restrictions[i].amount;
+                    locked = locked + amount;
                 
                 }
             }
