@@ -43,7 +43,7 @@ abstract contract IncomeContractBase is TrustedForwarder, ReentrancyGuardUpgrade
     struct Recipient {
         address addr;
         uint256 amountMax;
-        uint256 amountPayed;
+        uint256 amountPaid;
         uint256 amountAllowedByManager;
         Restrict[] restrictions;
         
@@ -86,7 +86,7 @@ abstract contract IncomeContractBase is TrustedForwarder, ReentrancyGuardUpgrade
             recipients[recipient].exists = true;
             recipients[recipient].addr = recipient;
             recipients[recipient].amountMax = 0;
-            recipients[recipient].amountPayed = 0;
+            recipients[recipient].amountPaid = 0;
             recipients[recipient].amountAllowedByManager = 0;
             
             
@@ -173,9 +173,9 @@ abstract contract IncomeContractBase is TrustedForwarder, ReentrancyGuardUpgrade
         canManage(recipient)
     {
         
-        (uint256 maximum, uint256 payed, uint256 locked, uint256 allowedByManager, ) = _viewLockup(recipient);
+        (uint256 maximum, uint256 paid, uint256 locked, uint256 allowedByManager, ) = _viewLockup(recipient);
         
-        uint256 availableUnlocked = maximum - payed - locked;
+        uint256 availableUnlocked = maximum - paid - locked;
         
         require (amount > 0, "Amount can not be a zero");
 
@@ -201,7 +201,7 @@ abstract contract IncomeContractBase is TrustedForwarder, ReentrancyGuardUpgrade
         require (allowedByManager > 0, "There are no available amount to claim");
 
         recipients[].amountAllowedByManager = 0;
-        recipients[ms].amountPayed = recipients[ms].amountPayed + allowedByManager;
+        recipients[ms].amountPaid = recipients[ms].amountPaid + allowedByManager;
         bool success = _claim(ms, allowedByManager);
 
         require(success == true, "There are no enough funds at contract");
@@ -214,7 +214,7 @@ abstract contract IncomeContractBase is TrustedForwarder, ReentrancyGuardUpgrade
      * View restrictions setup by owner
      * @param recipient recipient
      * @return maximum maximum
-     * @return payed payed
+     * @return paid paid
      * @return locked locked
      * @return allowedByManager allowedByManager
      * 
@@ -226,13 +226,13 @@ abstract contract IncomeContractBase is TrustedForwarder, ReentrancyGuardUpgrade
         view
         returns (
             uint256 maximum,
-            uint256 payed,
+            uint256 paid,
             uint256 locked,
             uint256 allowedByManager
         )
     {
         require(recipients[recipient].exists == true, "There are no such recipient");
-        (maximum, payed, locked,allowedByManager,) = _viewLockup(recipient);
+        (maximum, paid, locked,allowedByManager,) = _viewLockup(recipient);
     }
     
     
@@ -309,7 +309,7 @@ abstract contract IncomeContractBase is TrustedForwarder, ReentrancyGuardUpgrade
         view
         returns (
             uint256 maximum,
-            uint256 payed,
+            uint256 paid,
             uint256 locked,
             uint256 allowedByManager,
             Restrict[] memory restrictions
@@ -317,7 +317,7 @@ abstract contract IncomeContractBase is TrustedForwarder, ReentrancyGuardUpgrade
     {
         
         maximum = recipients[recipient].amountMax;
-        payed = recipients[recipient].amountPayed;
+        paid = recipients[recipient].amountPaid;
         locked = _calcLock(recipients[recipient].restrictions);
         allowedByManager = recipients[recipient].amountAllowedByManager;
         restrictions = recipients[recipient].restrictions;
