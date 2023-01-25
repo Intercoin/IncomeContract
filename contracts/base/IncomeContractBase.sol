@@ -195,13 +195,14 @@ abstract contract IncomeContractBase is TrustedForwarder, ReentrancyGuardUpgrade
         recipientExists(_msgSender())
         nonReentrant()
     {
-        (,,, uint256 allowedByManager, ) = _viewLockup(_msgSender());
+        address ms = _msgSender();
+        (,,, uint256 allowedByManager, ) = _viewLockup(ms);
         // 40 20 0 10 => 40 30 0 0
         require (allowedByManager > 0, "There are no available amount to claim");
 
-        recipients[_msgSender()].amountAllowedByManager = 0;
-        recipients[_msgSender()].amountPayed = recipients[_msgSender()].amountPayed + allowedByManager;
-        bool success = _claim(_msgSender(), allowedByManager);
+        recipients[].amountAllowedByManager = 0;
+        recipients[ms].amountPayed = recipients[ms].amountPayed + allowedByManager;
+        bool success = _claim(ms, allowedByManager);
 
         require(success == true, "There are no enough funds at contract");
         
