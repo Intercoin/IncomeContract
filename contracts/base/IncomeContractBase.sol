@@ -248,12 +248,9 @@ abstract contract IncomeContractBase is TrustedForwarder, ReentrancyGuardUpgrade
             bool success
         ) 
     {
-        uint256 balance;
-        if (tokenAddr == address(0)) {
-            balance = address(this).balance;
-        } else {
-            balance = IERC20Upgradeable(tokenAddr).balanceOf(address(this));
-        }
+        uint256 balance = (tokenAddr == address(0))
+            ? address(this).balance
+            : IERC20Upgradeable(tokenAddr).balanceOf(address(this));
         if (balance < amount) {
             success = false;
         } else {
@@ -279,7 +276,10 @@ abstract contract IncomeContractBase is TrustedForwarder, ReentrancyGuardUpgrade
             if (restrictions[i].untilTime > block.timestamp) {
                 uint32 amount = restrictions[i].amount;
                 if (restrictions[i].fraction > 0) {
-                    uint32 relativeAmount = restrictions[i].fraction * IERC20(tokenAddr).balanceOf(this) / 100000;
+                    uint256 balance = (tokenAddr == address(0))
+                        ? address(this).balance
+                        : IERC20Upgradeable(tokenAddr).balanceOf(address(this));
+                    uint32 relativeAmount = restrictions[i].fraction * balance / 100000;
                     if (relativeAmount < amount || amount == 0) {
                         amount = relativeAmount;
                     }
