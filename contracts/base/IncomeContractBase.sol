@@ -19,12 +19,14 @@ abstract contract IncomeContractBase is TrustedForwarder, ReentrancyGuardUpgrade
         uint256 startTime;
         uint256 untilTime;
         bool gradual;
+        uint32 fraction;
     }
     
     struct RestrictParam {
         uint256 amount;
         uint256 untilTime;
         bool gradual;
+        uint32 fraction;
     }
     
     
