@@ -179,8 +179,8 @@ abstract contract IncomeContractBase is TrustedForwarder, ReentrancyGuardUpgrade
         
         require (amount > 0, "Amount can not be a zero");
 
-        require (amount <= availableUnlocked, "Amount exceeds available unlocked balance");
-        require (amount <= availableUnlocked - allowedByManager, "Amount exceeds available allowed balance by manager");
+        require (amount <= availableUnlocked, "AMOUNT_EXCEEDS_BALANCE");
+        require (amount <= availableUnlocked - allowedByManager, "AMOUNT_EXCEEDS_RATE");
         
         recipients[recipient].amountAllowedByManager = recipients[recipient].amountAllowedByManager + amount;
         
