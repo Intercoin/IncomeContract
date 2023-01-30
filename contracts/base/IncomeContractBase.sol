@@ -19,29 +19,31 @@ abstract contract IncomeContractBase is TrustedForwarder, ReentrancyGuardUpgrade
         uint256 startTime;
         uint256 untilTime;
         bool gradual;
+        uint32 fraction;
     }
     
     struct RestrictParam {
         uint256 amount;
         uint256 untilTime;
         bool gradual;
+        uint32 fraction;
     }
     
     
     modifier recipientExists(address recipient) {
-        require(recipients[recipient].exists == true, "There are no such recipient");
+        require(recipients[recipient].exists == true, "NO_SUCH_RECIPIENT");
         _;
     }
     
     modifier canManage(address recipient) {
-        require(recipients[recipient].managers.contains(_msgSender()) == true, "Can not manage such recipient");
+        require(recipients[recipient].managers.contains(_msgSender()) == true, "CANNOT_MANAGE");
         _;
     }
    
     struct Recipient {
         address addr;
         uint256 amountMax;
-        uint256 amountPayed;
+        uint256 amountPaid;
         uint256 amountAllowedByManager;
         Restrict[] restrictions;
         
@@ -84,7 +86,7 @@ abstract contract IncomeContractBase is TrustedForwarder, ReentrancyGuardUpgrade
             recipients[recipient].exists = true;
             recipients[recipient].addr = recipient;
             recipients[recipient].amountMax = 0;
-            recipients[recipient].amountPayed = 0;
+            recipients[recipient].amountPaid = 0;
             recipients[recipient].amountAllowedByManager = 0;
             
             
@@ -116,7 +118,7 @@ abstract contract IncomeContractBase is TrustedForwarder, ReentrancyGuardUpgrade
             recipients[recipient].amountMax = recipients[recipient].amountMax + restrictions[i].amount;
             
             // adding restriction
-            require(restrictions[i].untilTime > block.timestamp, "untilTime must be more than current time");
+            require(restrictions[i].untilTime > block.timestamp, "untilTime");
             recipients[recipient].restrictions.push(Restrict({
                 amount: restrictions[i].amount,
                 startTime: block.timestamp,
@@ -171,14 +173,14 @@ abstract contract IncomeContractBase is TrustedForwarder, ReentrancyGuardUpgrade
         canManage(recipient)
     {
         
-        (uint256 maximum, uint256 payed, uint256 locked, uint256 allowedByManager, ) = _viewLockup(recipient);
+        (uint256 maximum, uint256 paid, uint256 locked, uint256 allowedByManager, ) = _viewLockup(recipient);
         
-        uint256 availableUnlocked = maximum - payed - locked;
+        uint256 availableUnlocked = maximum - paid - locked;
         
         require (amount > 0, "Amount can not be a zero");
 
-        require (amount <= availableUnlocked, "Amount exceeds available unlocked balance");
-        require (amount <= availableUnlocked - allowedByManager, "Amount exceeds available allowed balance by manager");
+        require (amount <= availableUnlocked, "AMOUNT_EXCEEDS_BALANCE");
+        require (amount <= availableUnlocked - allowedByManager, "AMOUNT_EXCEEDS_RATE");
         
         recipients[recipient].amountAllowedByManager = recipients[recipient].amountAllowedByManager + amount;
         
@@ -193,15 +195,21 @@ abstract contract IncomeContractBase is TrustedForwarder, ReentrancyGuardUpgrade
         recipientExists(_msgSender())
         nonReentrant()
     {
-        (,,, uint256 allowedByManager, ) = _viewLockup(_msgSender());
+        address ms = _msgSender();
+        
+        (,, uint256 locked, uint256 allowedByManager, ) = _viewLockup(ms);
+        
+        uint256 amount = (recipients[ms].managers.length() > 0 && recipients[ms].managers.at(0) == ms)
+            ? locked : allowedByManager;
+        
         // 40 20 0 10 => 40 30 0 0
-        require (allowedByManager > 0, "There are no available amount to claim");
+        require (amount > 0, "NOTHING_AVAILABLE_TO_CLAIM");
 
-        recipients[_msgSender()].amountAllowedByManager = 0;
-        recipients[_msgSender()].amountPayed = recipients[_msgSender()].amountPayed + allowedByManager;
-        bool success = _claim(_msgSender(), allowedByManager);
+        recipients[].amountAllowedByManager = 0;
+        recipients[ms].amountPaid = recipients[ms].amountPaid + amount;
+        bool success = _claim(ms, amount);
 
-        require(success == true, "There are no enough funds at contract");
+        require(success == true, "NOT_ENOUGH_FUNDS");
         
     }
     
@@ -211,7 +219,7 @@ abstract contract IncomeContractBase is TrustedForwarder, ReentrancyGuardUpgrade
      * View restrictions setup by owner
      * @param recipient recipient
      * @return maximum maximum
-     * @return payed payed
+     * @return paid paid
      * @return locked locked
      * @return allowedByManager allowedByManager
      * 
@@ -223,13 +231,13 @@ abstract contract IncomeContractBase is TrustedForwarder, ReentrancyGuardUpgrade
         view
         returns (
             uint256 maximum,
-            uint256 payed,
+            uint256 paid,
             uint256 locked,
             uint256 allowedByManager
         )
     {
-        require(recipients[recipient].exists == true, "There are no such recipient");
-        (maximum, payed, locked,allowedByManager,) = _viewLockup(recipient);
+        require(recipients[recipient].exists == true, "NO_SUCH_RECIPIENT");
+        (maximum, paid, locked,allowedByManager,) = _viewLockup(recipient);
     }
     
     
@@ -245,12 +253,9 @@ abstract contract IncomeContractBase is TrustedForwarder, ReentrancyGuardUpgrade
             bool success
         ) 
     {
-        uint256 balance;
-        if (tokenAddr == address(0)) {
-            balance = address(this).balance;
-        } else {
-            balance = IERC20Upgradeable(tokenAddr).balanceOf(address(this));
-        }
+        uint256 balance = (tokenAddr == address(0))
+            ? address(this).balance
+            : IERC20Upgradeable(tokenAddr).balanceOf(address(this));
         if (balance < amount) {
             success = false;
         } else {
@@ -274,14 +279,24 @@ abstract contract IncomeContractBase is TrustedForwarder, ReentrancyGuardUpgrade
         uint256 fundsPerSecond;
         for (uint256 i = 0; i < restrictions.length; i++ ) {
             if (restrictions[i].untilTime > block.timestamp) {
+                uint32 amount = restrictions[i].amount;
+                if (restrictions[i].fraction > 0) {
+                    uint256 balance = (tokenAddr == address(0))
+                        ? address(this).balance
+                        : IERC20Upgradeable(tokenAddr).balanceOf(address(this));
+                    uint32 relativeAmount = restrictions[i].fraction * balance / 100000;
+                    if (relativeAmount < amount || amount == 0) {
+                        amount = relativeAmount;
+                    }
+                }
                 if (restrictions[i].gradual == true) {
-                    fundsPerSecond = restrictions[i].amount / (restrictions[i].untilTime - restrictions[i].startTime);
+                    fundsPerSecond = amount / (restrictions[i].untilTime - restrictions[i].startTime);
                     locked = locked + (
                         fundsPerSecond * (restrictions[i].untilTime - block.timestamp)
                     );
                     
                 } else {
-                    locked = locked + restrictions[i].amount;
+                    locked = locked + amount;
                 
                 }
             }
@@ -299,7 +314,7 @@ abstract contract IncomeContractBase is TrustedForwarder, ReentrancyGuardUpgrade
         view
         returns (
             uint256 maximum,
-            uint256 payed,
+            uint256 paid,
             uint256 locked,
             uint256 allowedByManager,
             Restrict[] memory restrictions
@@ -307,7 +322,7 @@ abstract contract IncomeContractBase is TrustedForwarder, ReentrancyGuardUpgrade
     {
         
         maximum = recipients[recipient].amountMax;
-        payed = recipients[recipient].amountPayed;
+        paid = recipients[recipient].amountPaid;
         locked = _calcLock(recipients[recipient].restrictions);
         allowedByManager = recipients[recipient].amountAllowedByManager;
         restrictions = recipients[recipient].restrictions;
