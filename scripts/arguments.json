@@ -1,0 +1,11 @@
+{
+  "hardhat": {
+    "time_created": 1675102413360,
+    "implementationIncomeContract": "0x36b58F5C1969B7b6591D752ea6F5486D069010AB",
+    "implementationIncomeContractUBI": "0x8198f5d8F8CfFE8f9C413d98a0A55aEB8ab9FbB7",
+    "implementationIncomeContractUBILinear": "0x0355B7B8cb128fA5692729Ab3AAa199C1753f726",
+    "releaseManager": "0xccfefc930c5960d195f04a5a9a1bf6a155fcd671",
+    "time_updated": 1675102473650
+  },
+  "time_updated": 1675102473650
+}
