@@ -25,6 +25,7 @@ const FRACTION = BigNumber.from('100000');
 const RATE_MULTIPLIER = BigNumber.from('1000000');
 const MEMBERSROLE= 'members';
 const UBIROLE = 'members'
+const NO_COSTMANAGER = ZERO_ADDRESS;
 
 chai.use(require('chai-bignumber')());
 
@@ -67,9 +68,22 @@ describe("IncomeContractUBI",  async() => {
     // vars
     var ERC20TokenFactory, IncomeContractUBIMockFactory, CommunityMockFactory;
     var IncomeContractUBIMockInstance, ERC20MintableToken, CommunityMockInstance;
-
+    var ReleaseManagerFactoryF;
+    var ReleaseManagerF;
     
     beforeEach("deploying", async() => {
+        ReleaseManagerFactoryF= await ethers.getContractFactory("MockReleaseManagerFactory")
+        ReleaseManagerF = await ethers.getContractFactory("MockReleaseManager");
+        let implementationReleaseManager    = await ReleaseManagerF.deploy();
+        let releaseManagerFactory   = await ReleaseManagerFactoryF.connect(owner).deploy(implementationReleaseManager.address);
+        let tx,rc,event,instance,instancesCount;
+        //
+        tx = await releaseManagerFactory.connect(owner).produce();
+        rc = await tx.wait(); // 0ms, as tx is already confirmed
+        event = rc.events.find(event => event.event === 'InstanceProduced');
+        [instance, instancesCount] = event.args;
+        let releaseManager = await ethers.getContractAt("MockReleaseManager",instance);
+
         ERC20TokenFactory = await ethers.getContractFactory("ERC20Mintable");
         CommunityMockFactory = await ethers.getContractFactory("CommunityMock");
 
@@ -89,7 +103,9 @@ describe("IncomeContractUBI",  async() => {
         IncomeContractFactory = await IncomeContractFactoryFactory.connect(owner).deploy(
             IncomeContractMock.address,
             IncomeContractUBIMockInstance.address,
-            IncomeContractUBILinearInstance.address
+            IncomeContractUBILinearInstance.address,
+            NO_COSTMANAGER,
+            releaseManager.address
         );
         //-----------------
     });

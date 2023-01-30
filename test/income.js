@@ -22,6 +22,7 @@ const HUN = BigNumber.from('100');
 const TENIN18 = TEN.pow(BigNumber.from('18'));
 
 const FRACTION = BigNumber.from('100000');
+const NO_COSTMANAGER = ZERO_ADDRESS;
 
 chai.use(require('chai-bignumber')());
 
@@ -51,8 +52,22 @@ describe("income",  async() => {
     // vars
     var ERC20TokenFactory, IncomeContractMockFactory;
     var IncomeContractMock, ERC20MintableToken;
+    var ReleaseManagerFactoryF;
+    var ReleaseManagerF;
+
     beforeEach("deploying", async() => {
-        
+        ReleaseManagerFactoryF= await ethers.getContractFactory("MockReleaseManagerFactory")
+        ReleaseManagerF = await ethers.getContractFactory("MockReleaseManager");
+        let implementationReleaseManager    = await ReleaseManagerF.deploy();
+        let releaseManagerFactory   = await ReleaseManagerFactoryF.connect(owner).deploy(implementationReleaseManager.address);
+        let tx,rc,event,instance,instancesCount;
+        //
+        tx = await releaseManagerFactory.connect(owner).produce();
+        rc = await tx.wait(); // 0ms, as tx is already confirmed
+        event = rc.events.find(event => event.event === 'InstanceProduced');
+        [instance, instancesCount] = event.args;
+        let releaseManager = await ethers.getContractAt("MockReleaseManager",instance);
+
         ERC20TokenFactory = await ethers.getContractFactory("ERC20Mintable");
         ERC20MintableToken = await ERC20TokenFactory.connect(owner).deploy('t2','t2');
 
@@ -69,7 +84,9 @@ describe("income",  async() => {
         IncomeContractFactory = await IncomeContractFactoryFactory.connect(owner).deploy(
             IncomeContractMock.address,
             IncomeContractUBIMockInstance.address,
-            IncomeContractUBILinearInstance.address
+            IncomeContractUBILinearInstance.address,
+            NO_COSTMANAGER,
+            releaseManager.address
         );
         //-----------------
     });

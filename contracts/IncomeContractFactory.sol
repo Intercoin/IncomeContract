@@ -3,12 +3,14 @@ pragma solidity ^0.8.11;
 
 import "@openzeppelin/contracts/proxy/Clones.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@artman325/releasemanager/contracts/CostManagerFactoryHelper.sol";
+import "@artman325/releasemanager/contracts/ReleaseManagerHelper.sol";
 //import "./interfaces/IControlContract.sol";
 import "./interfaces/IIncomeContract.sol";
 import "./interfaces/IIncomeContractUBI.sol";
 import "./interfaces/IIncomeContractUBILinear.sol";
 
-contract IncomeContractFactory {
+contract IncomeContractFactory is CostManagerFactoryHelper, ReleaseManagerHelper{
     using Clones for address;
 
     /**
@@ -41,8 +43,12 @@ contract IncomeContractFactory {
     constructor(
         address incomeContractImpl,
         address incomeContractUBIImpl,
-        address incomeContractUBILinearImpl
+        address incomeContractUBILinearImpl,
+        address costManager,
+        address releaseManager
     ) 
+        CostManagerFactoryHelper(costManager) 
+        ReleaseManagerHelper(releaseManager) 
     {
         incomeContractImplementation = incomeContractImpl;
         incomeContractUBIImplementation = incomeContractUBIImpl;

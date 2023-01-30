@@ -27,6 +27,7 @@ const FRACTION = BigNumber.from('100000');
 const UBIROLE = 'members';
 const UBIQuantity = THREE.mul(TENIN18)//.mul(RATE_MULTIPLIER);
 const UBIPeriod = BigNumber.from(3*60*60); // 3 hours
+const NO_COSTMANAGER = ZERO_ADDRESS;
 
 chai.use(require('chai-bignumber')());
 
@@ -69,9 +70,27 @@ describe("IncomeContractUBILinear",  async() => {
     // vars
     var ERC20TokenFactory, IncomeContractUBILinearFactory, CommunityMockFactory;
     var IncomeContractUBILinearInstance, ERC20MintableToken, CommunityMockInstance;
+    var ReleaseManagerFactoryF;
+    var ReleaseManagerF;
+    var snapId;
 
     
     beforeEach("deploying", async() => {
+        // make snapshot before time manipulations
+        snapId = await ethers.provider.send('evm_snapshot', []);
+        
+        ReleaseManagerFactoryF= await ethers.getContractFactory("MockReleaseManagerFactory")
+        ReleaseManagerF = await ethers.getContractFactory("MockReleaseManager");
+        let implementationReleaseManager    = await ReleaseManagerF.deploy();
+        let releaseManagerFactory   = await ReleaseManagerFactoryF.connect(owner).deploy(implementationReleaseManager.address);
+        let tx,rc,event,instance,instancesCount;
+        //
+        tx = await releaseManagerFactory.connect(owner).produce();
+        rc = await tx.wait(); // 0ms, as tx is already confirmed
+        event = rc.events.find(event => event.event === 'InstanceProduced');
+        [instance, instancesCount] = event.args;
+        let releaseManager = await ethers.getContractAt("MockReleaseManager",instance);
+
         ERC20TokenFactory = await ethers.getContractFactory("ERC20Mintable");
         CommunityMockFactory = await ethers.getContractFactory("CommunityMock");
 
@@ -91,9 +110,17 @@ describe("IncomeContractUBILinear",  async() => {
         IncomeContractFactory = await IncomeContractFactoryFactory.connect(owner).deploy(
             IncomeContractMock.address,
             IncomeContractUBIMockInstance.address,
-            IncomeContractUBILinearInstance.address
+            IncomeContractUBILinearInstance.address,
+            NO_COSTMANAGER,
+            releaseManager.address
         );
         //-----------------
+    });
+
+    afterEach("deploying", async() => { 
+        // restore snapshot
+        await ethers.provider.send('evm_revert', [snapId]);
+        //console.log(`afterEach("deploying"`);
     });
 
     for (const trustedForwardMode of [false,trustedForwarder]) {
