@@ -238,7 +238,6 @@ abstract contract IncomeContractBase is TrustedForwarder, ReentrancyGuardUpgrade
         (maximum, paid, locked,allowedByManager,) = _viewLockup(recipient);
     }
     
-    
     /**
      * @param recipient recipient"s address
      */
@@ -254,6 +253,8 @@ abstract contract IncomeContractBase is TrustedForwarder, ReentrancyGuardUpgrade
         uint256 balance = (tokenAddr == address(0))
             ? address(this).balance
             : IERC20Upgradeable(tokenAddr).balanceOf(address(this));
+
+
         if (balance < amount) {
             success = false;
         } else {
@@ -278,11 +279,13 @@ abstract contract IncomeContractBase is TrustedForwarder, ReentrancyGuardUpgrade
         for (uint256 i = 0; i < restrictions.length; i++ ) {
             if (restrictions[i].untilTime > block.timestamp) {
                 uint256 amount = restrictions[i].amount;
+                
                 if (restrictions[i].fraction > 0) {
                     uint256 balance = (tokenAddr == address(0))
                         ? address(this).balance
                         : IERC20Upgradeable(tokenAddr).balanceOf(address(this));
                     uint256 relativeAmount = restrictions[i].fraction * balance / FRACTION;
+
                     if (relativeAmount < amount || amount == 0) {
                         amount = relativeAmount;
                     }

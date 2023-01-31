@@ -5,3 +5,5 @@ artifacts
 .deps
 /bin
 /cache
+coverage.json
+/coverage

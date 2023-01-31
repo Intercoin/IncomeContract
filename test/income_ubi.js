@@ -112,8 +112,37 @@ describe("IncomeContractUBI",  async() => {
 
     for (const trustedForwardMode of [false,trustedForwarder]) {
     for ( const FactoryMode of [true, false]) {
-
     for ( const ETHMode of [true, false]) {
+
+    if (FactoryMode && !trustedForwardMode) {  
+    it("should produce deterministic", async() => {
+        const salt    = "0x00112233445566778899AABBCCDDEEFF00000000000000000000000000000000";
+        let tx = await IncomeContractFactory.connect(owner)["produceDeterministic(bytes32,address,address,string,string)"](
+            salt,
+            (ETHMode) ? ZERO_ADDRESS : ERC20MintableToken.address, 
+            CommunityMockInstance.address, 
+            MEMBERSROLE, 
+            UBIROLE
+        );
+
+        let rc = await tx.wait(); // 0ms, as tx is already confirmed
+        let event = rc.events.find(event => event.event === 'InstanceCreated');
+        //let [instance,] = event.args;
+        
+        await expect(
+            IncomeContractFactory.connect(owner)["produceDeterministic(bytes32,address,address,string,string)"](
+                salt,
+                (ETHMode) ? ZERO_ADDRESS : ERC20MintableToken.address, 
+                CommunityMockInstance.address, 
+                MEMBERSROLE, 
+                UBIROLE
+            )
+        ).to.be.revertedWith('ERC1167: create2 failed');
+
+        expect(await IncomeContractFactory.connect(owner).instancesCount()).to.be.eq(ONE);
+    });
+    }
+
     it(""+(trustedForwardMode ? '[trusted forwarder]' : '')+(FactoryMode ? "Factory " : "")+"tests simple lifecycle ("+(ETHMode ? "ETH" : "ERC20")+")", async() => {
         if (FactoryMode == true) {
             let tx = await IncomeContractFactory.connect(owner)["produce(address,address,string,string)"](
