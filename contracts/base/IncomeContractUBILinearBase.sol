@@ -98,7 +98,7 @@ abstract contract IncomeContractUBILinearBase is IUBILinear, IncomeContractBase,
         require(toPay > 0, "Amount exceeds balance available to claim");
         users[sender].payed = users[sender].payed + toPay;
         bool success = _claim(sender, toPay);
-        require(success == true, "There are no enough funds at contract");
+        require(success == true, "NOT_ENOUGH_FUNDS");
         
     }
    

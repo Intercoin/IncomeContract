@@ -162,28 +162,31 @@ describe("IncomeContractUBI",  async() => {
         t.push({
             amount: TWO.mul(TENIN18), 
             untilTime: timeNow+1*60*60, 
-            gradual: false
+            gradual: false, 
+            fraction: FRACTION
         });
         t.push({
             amount: TWO.mul(TENIN18), 
             untilTime: timeNow+2*60*60, 
-            gradual: false
+            gradual: false, 
+            fraction: FRACTION
         });
         t.push({
             amount: TWO.mul(TENIN18), 
             untilTime: timeNow+3*60*60, 
-            gradual: false
+            gradual: false, 
+            fraction: FRACTION
         });
 
-        await mixedCall(IncomeContractUBIMockInstance, trustedForwardMode, owner, 'setLockup(address,(uint256,uint256,bool)[])', [accountOne.address, t]);
+        await mixedCall(IncomeContractUBIMockInstance, trustedForwardMode, owner, 'setLockup(address,(uint256,uint256,bool,uint32)[])', [accountOne.address, t]);
 
-        await mixedCall(IncomeContractUBIMockInstance, trustedForwardMode, accountOne, 'claim()', [], "There are no available amount to claim");
+        await mixedCall(IncomeContractUBIMockInstance, trustedForwardMode, accountOne, 'claim()', [], "NOTHING_AVAILABLE_TO_CLAIM");
         
         // pass 1 hour
         passTime(1*60*60);
 
         // reverts  because manager didn't pay yet
-        await mixedCall(IncomeContractUBIMockInstance, trustedForwardMode, accountOne, 'claim()', [], "There are no available amount to claim");
+        await mixedCall(IncomeContractUBIMockInstance, trustedForwardMode, accountOne, 'claim()', [], "NOTHING_AVAILABLE_TO_CLAIM");
 
         await mixedCall(IncomeContractUBIMockInstance, trustedForwardMode, accountFive, 'pay(address,uint256)', [accountOne.address, TWO.mul(TENIN18)]);
 
@@ -225,17 +228,17 @@ describe("IncomeContractUBI",  async() => {
         ).to.be.eq(balanceIncomeContractUBIMockInstanceAfter.add(TWO.mul(TENIN18)));
         
         // reverts. recipient already got own 2 eth for first hour
-        await mixedCall(IncomeContractUBIMockInstance, trustedForwardMode, accountOne, 'claim()', [], "There are no available amount to claim");
+        await mixedCall(IncomeContractUBIMockInstance, trustedForwardMode, accountOne, 'claim()', [], "NOTHING_AVAILABLE_TO_CLAIM");
         
         // managers want to pay another 2 eth( for second hour) but reverts. it is not time
-        await mixedCall(IncomeContractUBIMockInstance, trustedForwardMode, accountFive, 'pay(address,uint256)', [accountOne.address, TWO.mul(TENIN18)], "Amount exceeds available unlocked balance");
+        await mixedCall(IncomeContractUBIMockInstance, trustedForwardMode, accountFive, 'pay(address,uint256)', [accountOne.address, TWO.mul(TENIN18)], "AMOUNT_EXCEEDS_BALANCE");
 
         // pass another 1 hour
         passTime(1*60*60);
         
         // now available to pay another 2eth
         // manager want to pay all eth (4eth). but reverts
-        await mixedCall(IncomeContractUBIMockInstance, trustedForwardMode, accountFive, 'pay(address,uint256)', [accountOne.address, FOURTH.mul(TENIN18)], "Amount exceeds available unlocked balance");
+        await mixedCall(IncomeContractUBIMockInstance, trustedForwardMode, accountFive, 'pay(address,uint256)', [accountOne.address, FOURTH.mul(TENIN18)], "AMOUNT_EXCEEDS_BALANCE");
         
         // manager pay send 2 eth
         await mixedCall(IncomeContractUBIMockInstance, trustedForwardMode, accountFive, 'pay(address,uint256)', [accountOne.address, TWO.mul(TENIN18)]);
@@ -245,7 +248,7 @@ describe("IncomeContractUBI",  async() => {
         
         // now for recipient avaialble 4 eth
         // manager want to pay 4 eth, but 2eth of them he has already payed before. so reverts
-        await mixedCall(IncomeContractUBIMockInstance, trustedForwardMode, accountFive, 'pay(address,uint256)', [accountOne.address, FOURTH.mul(TENIN18)], "Amount exceeds available allowed balance by manager");
+        await mixedCall(IncomeContractUBIMockInstance, trustedForwardMode, accountFive, 'pay(address,uint256)', [accountOne.address, FOURTH.mul(TENIN18)], "AMOUNT_EXCEEDS_RATE");
         
         // so pay only 2 eth left
         await mixedCall(IncomeContractUBIMockInstance, trustedForwardMode, accountFive, 'pay(address,uint256)', [accountOne.address, TWO.mul(TENIN18)]);

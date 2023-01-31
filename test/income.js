@@ -133,28 +133,31 @@ describe("income",  async() => {
         t.push({
             amount: TWO.mul(TENIN18), 
             untilTime: timeNow+1*60*60, 
-            gradual: false
+            gradual: false, 
+            fraction: FRACTION
         });
         t.push({
             amount: TWO.mul(TENIN18), 
             untilTime: timeNow+2*60*60, 
-            gradual: false
+            gradual: false, 
+            fraction: FRACTION
         });
         t.push({
             amount: TWO.mul(TENIN18), 
             untilTime: timeNow+3*60*60, 
-            gradual: false
+            gradual: false, 
+            fraction: FRACTION
         });
 
-        await mixedCall(IncomeContractMock, trustedForwardMode, owner, 'setLockup(address,(uint256,uint256,bool)[])', [accountOne.address, t]);
+        await mixedCall(IncomeContractMock, trustedForwardMode, owner, 'setLockup(address,(uint256,uint256,bool,uint32)[])', [accountOne.address, t]);
         
-        await mixedCall(IncomeContractMock, trustedForwardMode, accountOne, 'claim()', [], "There are no available amount to claim");
+        await mixedCall(IncomeContractMock, trustedForwardMode, accountOne, 'claim()', [], "NOTHING_AVAILABLE_TO_CLAIM");
         
         // pass 1 hour
         await ethers.provider.send('evm_increaseTime', [1*60*60]);
         await ethers.provider.send('evm_mine');
         // reverts  because manager didn't pay yet
-        await mixedCall(IncomeContractMock, trustedForwardMode, accountOne, 'claim()', [], "There are no available amount to claim");
+        await mixedCall(IncomeContractMock, trustedForwardMode, accountOne, 'claim()', [], "NOTHING_AVAILABLE_TO_CLAIM");
 
         await mixedCall(IncomeContractMock, trustedForwardMode, accountFive, 'pay(address,uint256)', [accountOne.address, TWO.mul(TENIN18)]);
 
@@ -199,10 +202,10 @@ describe("income",  async() => {
         
         
         // reverts. recipient already got own 2 eth for first hour
-        await mixedCall(IncomeContractMock, trustedForwardMode, accountOne, 'claim()', [], "There are no available amount to claim");
+        await mixedCall(IncomeContractMock, trustedForwardMode, accountOne, 'claim()', [], "NOTHING_AVAILABLE_TO_CLAIM");
         
         // managers want to pay another 2 eth( for second hour) but reverts. it is not time
-        await mixedCall(IncomeContractMock, trustedForwardMode, accountFive, 'pay(address,uint256)', [accountOne.address, TWO.mul(TENIN18)], "Amount exceeds available unlocked balance");
+        await mixedCall(IncomeContractMock, trustedForwardMode, accountFive, 'pay(address,uint256)', [accountOne.address, TWO.mul(TENIN18)], "AMOUNT_EXCEEDS_BALANCE");
 
 
         // pass another 1 hour
@@ -210,7 +213,7 @@ describe("income",  async() => {
         
         // now available to pay another 2eth
         // manager want to pay all eth (4eth). but reverts
-        await mixedCall(IncomeContractMock, trustedForwardMode, accountFive, 'pay(address,uint256)', [accountOne.address, FOURTH.mul(TENIN18)], "Amount exceeds available unlocked balance");
+        await mixedCall(IncomeContractMock, trustedForwardMode, accountFive, 'pay(address,uint256)', [accountOne.address, FOURTH.mul(TENIN18)], "AMOUNT_EXCEEDS_BALANCE");
         
         // manager pay send 2 eth
         await mixedCall(IncomeContractMock, trustedForwardMode, accountFive, 'pay(address,uint256)', [accountOne.address, TWO.mul(TENIN18)]);
@@ -221,7 +224,7 @@ describe("income",  async() => {
         // now for recipient avaialble 4 eth
        
         // manager want to pay 4 eth, but 2eth of them he has already payed before. so reverts
-        await mixedCall(IncomeContractMock, trustedForwardMode, accountFive, 'pay(address,uint256)', [accountOne.address, FOURTH.mul(TENIN18)], "Amount exceeds available allowed balance by manager");
+        await mixedCall(IncomeContractMock, trustedForwardMode, accountFive, 'pay(address,uint256)', [accountOne.address, FOURTH.mul(TENIN18)], "AMOUNT_EXCEEDS_RATE");
         
         // so pay only 2 eth left
         await mixedCall(IncomeContractMock, trustedForwardMode, accountFive, 'pay(address,uint256)', [accountOne.address, TWO.mul(TENIN18)]);
@@ -300,11 +303,12 @@ describe("income",  async() => {
         t.push({
             amount: EIGHT.mul(TENIN18), 
             untilTime: timeNow+1*60*60, 
-            gradual: false
+            gradual: false, 
+            fraction: FRACTION
         });
 
-        await mixedCall(IncomeContractMock, trustedForwardMode, owner, 'setLockup(address,(uint256,uint256,bool)[])', [accountOne.address, t]);
-        await mixedCall(IncomeContractMock, trustedForwardMode, owner, 'setLockup(address,(uint256,uint256,bool)[])', [accountTwo.address, t]);
+        await mixedCall(IncomeContractMock, trustedForwardMode, owner, 'setLockup(address,(uint256,uint256,bool,uint32)[])', [accountOne.address, t]);
+        await mixedCall(IncomeContractMock, trustedForwardMode, owner, 'setLockup(address,(uint256,uint256,bool,uint32)[])', [accountTwo.address, t]);
         
         // pass 1 hour
         await passTime(1*60*60);
@@ -314,7 +318,7 @@ describe("income",  async() => {
 
         await mixedCall(IncomeContractMock, trustedForwardMode, accountOne, 'claim()', []);
 
-        await mixedCall(IncomeContractMock, trustedForwardMode, accountTwo, 'claim()', [], "There are no enough funds at contract");
+        await mixedCall(IncomeContractMock, trustedForwardMode, accountTwo, 'claim()', [], "NOT_ENOUGH_FUNDS");
 
         await ERC20MintableToken.connect(owner).mint(IncomeContractMock.address, SIX.mul(TENIN18));
         

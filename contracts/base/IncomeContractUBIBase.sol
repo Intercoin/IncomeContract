@@ -210,7 +210,7 @@ abstract contract IncomeContractUBIBase is IUBI, IncomeContractBase, UBIBase {
         require(toPay / multiplier > 0, "Amount exceeds balance available to claim");
         users[sender].payed = users[sender].payed + toPay;
         bool success = _claim(sender, toPay / multiplier);
-        require(success == true, "There are no enough funds at contract");
+        require(success == true, "NOT_ENOUGH_FUNDS");
         
     }
     

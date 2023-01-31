@@ -9,9 +9,7 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 
-import "../IntercoinTrait.sol";
-
-abstract contract IncomeContractBase is TrustedForwarder, ReentrancyGuardUpgradeable, IntercoinTrait {
+abstract contract IncomeContractBase is TrustedForwarder, ReentrancyGuardUpgradeable {
     using EnumerableSetUpgradeable for EnumerableSetUpgradeable.AddressSet;
     
     struct Restrict {
@@ -28,8 +26,7 @@ abstract contract IncomeContractBase is TrustedForwarder, ReentrancyGuardUpgrade
         bool gradual;
         uint32 fraction;
     }
-    
-    
+        
     modifier recipientExists(address recipient) {
         require(recipients[recipient].exists == true, "NO_SUCH_RECIPIENT");
         _;
@@ -39,6 +36,7 @@ abstract contract IncomeContractBase is TrustedForwarder, ReentrancyGuardUpgrade
         require(recipients[recipient].managers.contains(_msgSender()) == true, "CANNOT_MANAGE");
         _;
     }
+    uint32 constant FRACTION = 100000;
    
     struct Recipient {
         address addr;
@@ -46,14 +44,13 @@ abstract contract IncomeContractBase is TrustedForwarder, ReentrancyGuardUpgrade
         uint256 amountPaid;
         uint256 amountAllowedByManager;
         Restrict[] restrictions;
-        
         EnumerableSetUpgradeable.AddressSet managers;
-        
         bool exists;
     }
     
     mapping(address => Recipient) recipients;
     address tokenAddr;
+
     
     function __IncomeContract_init(
         address token // can be address(0) = 0x0000000000000000000000000000000000000000   mean   ETH
@@ -123,7 +120,8 @@ abstract contract IncomeContractBase is TrustedForwarder, ReentrancyGuardUpgrade
                 amount: restrictions[i].amount,
                 startTime: block.timestamp,
                 untilTime: restrictions[i].untilTime,
-                gradual: restrictions[i].gradual
+                gradual: restrictions[i].gradual,
+                fraction: restrictions[i].fraction
             }));
             
         }
@@ -205,7 +203,7 @@ abstract contract IncomeContractBase is TrustedForwarder, ReentrancyGuardUpgrade
         // 40 20 0 10 => 40 30 0 0
         require (amount > 0, "NOTHING_AVAILABLE_TO_CLAIM");
 
-        recipients[].amountAllowedByManager = 0;
+        recipients[ms].amountAllowedByManager = 0;
         recipients[ms].amountPaid = recipients[ms].amountPaid + amount;
         bool success = _claim(ms, amount);
 
@@ -279,12 +277,12 @@ abstract contract IncomeContractBase is TrustedForwarder, ReentrancyGuardUpgrade
         uint256 fundsPerSecond;
         for (uint256 i = 0; i < restrictions.length; i++ ) {
             if (restrictions[i].untilTime > block.timestamp) {
-                uint32 amount = restrictions[i].amount;
+                uint256 amount = restrictions[i].amount;
                 if (restrictions[i].fraction > 0) {
                     uint256 balance = (tokenAddr == address(0))
                         ? address(this).balance
                         : IERC20Upgradeable(tokenAddr).balanceOf(address(this));
-                    uint32 relativeAmount = restrictions[i].fraction * balance / 100000;
+                    uint256 relativeAmount = restrictions[i].fraction * balance / FRACTION;
                     if (relativeAmount < amount || amount == 0) {
                         amount = relativeAmount;
                     }
