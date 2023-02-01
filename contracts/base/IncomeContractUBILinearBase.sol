@@ -19,7 +19,7 @@ abstract contract IncomeContractUBILinearBase is IUBILinear, IncomeContractBase,
 
     struct UBIStruct {
         uint256 lastIndex;
-        uint256 payed;
+        uint256 paid;
         uint256 total;
         //uint256 prevUBI;
         bool exists;
@@ -68,7 +68,7 @@ abstract contract IncomeContractUBILinearBase is IUBILinear, IncomeContractBase,
     {
         address sender = _msgSender();
         uint256 lastIndex = users[sender].lastIndex;
-        uint256 payed = users[sender].payed;
+        uint256 paid = users[sender].paid;
         uint256 total = users[sender].total;
 
         if (users[sender].exists == false) {
@@ -82,7 +82,7 @@ abstract contract IncomeContractUBILinearBase is IUBILinear, IncomeContractBase,
             lastIndex = i + ubiPeriod;
             
         }
-        ubi = total - payed;
+        ubi = total - paid;
     }
     
     function claimUBI(
@@ -94,9 +94,9 @@ abstract contract IncomeContractUBILinearBase is IUBILinear, IncomeContractBase,
         canObtainUBI();
         address sender = _msgSender();
         _actualizeUBI(sender);
-        uint256 toPay = users[sender].total - users[sender].payed;
+        uint256 toPay = users[sender].total - users[sender].paid;
         require(toPay > 0, "Amount exceeds balance available to claim");
-        users[sender].payed = users[sender].payed + toPay;
+        users[sender].paid = users[sender].paid + toPay;
         bool success = _claim(sender, toPay);
         require(success == true, "NOT_ENOUGH_FUNDS");
         
@@ -112,7 +112,7 @@ abstract contract IncomeContractUBILinearBase is IUBILinear, IncomeContractBase,
 
         if (users[account].exists == false) {
             users[account].lastIndex = startDateIndex;
-            users[account].payed = 0;
+            users[account].paid = 0;
             users[account].total = 0;
             users[account].exists = true;
         }
@@ -124,7 +124,7 @@ abstract contract IncomeContractUBILinearBase is IUBILinear, IncomeContractBase,
             users[account].lastIndex += ubiPeriod;
 
         }
-        ubi = users[account].total - users[account].payed;
+        ubi = users[account].total - users[account].paid;
     }
 
     function getCurrentDateIndex(
