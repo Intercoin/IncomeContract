@@ -41,7 +41,7 @@ abstract contract IncomeContractBase is TrustedForwarder, ReentrancyGuardUpgrade
     struct Recipient {
         address addr;
         uint256 amountMax;
-        uint256 amountPaid;
+        uint256 amountClaimed; //means how funds user have claimed already
         uint256 amountAllowedByManager;
         Restrict[] restrictions;
         EnumerableSetUpgradeable.AddressSet managers;
@@ -83,7 +83,7 @@ abstract contract IncomeContractBase is TrustedForwarder, ReentrancyGuardUpgrade
             recipients[recipient].exists = true;
             recipients[recipient].addr = recipient;
             recipients[recipient].amountMax = 0;
-            recipients[recipient].amountPaid = 0;
+            recipients[recipient].amountClaimed = 0;
             recipients[recipient].amountAllowedByManager = 0;
             
             
@@ -204,7 +204,7 @@ abstract contract IncomeContractBase is TrustedForwarder, ReentrancyGuardUpgrade
         require (amount > 0, "NOTHING_AVAILABLE_TO_CLAIM");
 
         recipients[ms].amountAllowedByManager = 0;
-        recipients[ms].amountPaid = recipients[ms].amountPaid + amount;
+        recipients[ms].amountClaimed = recipients[ms].amountClaimed + amount;
         bool success = _claim(ms, amount);
 
         require(success == true, "NOT_ENOUGH_FUNDS");
@@ -323,7 +323,7 @@ abstract contract IncomeContractBase is TrustedForwarder, ReentrancyGuardUpgrade
     {
         
         maximum = recipients[recipient].amountMax;
-        paid = recipients[recipient].amountPaid;
+        paid = recipients[recipient].amountClaimed;
         locked = _calcLock(recipients[recipient].restrictions);
         allowedByManager = recipients[recipient].amountAllowedByManager;
         restrictions = recipients[recipient].restrictions;
