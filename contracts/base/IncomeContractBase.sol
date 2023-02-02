@@ -79,7 +79,7 @@ abstract contract IncomeContractBase is TrustedForwarder, OwnableUpgradeable, Re
     function addRecipient(
         address recipient
     ) 
-        public 
+        external 
         onlyOwner 
     {
         if (recipients[recipient].exists == false) {
@@ -127,7 +127,7 @@ abstract contract IncomeContractBase is TrustedForwarder, OwnableUpgradeable, Re
         address recipient,
         RestrictParam[] memory restrictions
     ) 
-        public 
+        external 
         onlyOwner 
         recipientExists(recipient)
     {
@@ -157,7 +157,7 @@ abstract contract IncomeContractBase is TrustedForwarder, OwnableUpgradeable, Re
         address recipient, 
         address manager
     ) 
-        public 
+        external 
         onlyOwner 
     {
         recipients[recipient].managers.add(manager);
@@ -171,7 +171,7 @@ abstract contract IncomeContractBase is TrustedForwarder, OwnableUpgradeable, Re
         address recipient, 
         address manager
     ) 
-        public 
+        external 
         onlyOwner 
     {
         recipients[recipient].managers.remove(manager);
@@ -188,7 +188,7 @@ abstract contract IncomeContractBase is TrustedForwarder, OwnableUpgradeable, Re
         address recipient, 
         uint256 amount
     ) 
-        public 
+        external 
         recipientExists(recipient)
         canManage(recipient)
     {
@@ -211,7 +211,7 @@ abstract contract IncomeContractBase is TrustedForwarder, OwnableUpgradeable, Re
 
     function claim(
     ) 
-        public 
+        external 
         recipientExists(_msgSender())
         nonReentrant()
     {
@@ -247,7 +247,7 @@ abstract contract IncomeContractBase is TrustedForwarder, OwnableUpgradeable, Re
     function viewLockup(
         address recipient
     ) 
-        public 
+        external 
         view
         returns (
             uint256 maximum,

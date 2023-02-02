@@ -82,7 +82,7 @@ contract IncomeContractFactory is CostManagerFactoryHelper, ReleaseManagerHelper
     function produce(
         address token
     ) 
-        public 
+        external 
         returns (address instance) 
     {
         instance = incomeContractImplementation.clone();
@@ -99,7 +99,7 @@ contract IncomeContractFactory is CostManagerFactoryHelper, ReleaseManagerHelper
         bytes32 salt,
         address token
     ) 
-        public 
+        external 
         returns (address instance) 
     {
         instance = incomeContractImplementation.cloneDeterministic(salt);
@@ -120,7 +120,7 @@ contract IncomeContractFactory is CostManagerFactoryHelper, ReleaseManagerHelper
         uint8 role,
         uint8 ubiRole
     ) 
-        public 
+        external 
         returns (address instance) 
     {
         instance = incomeContractUBIImplementation.clone();
@@ -143,7 +143,7 @@ contract IncomeContractFactory is CostManagerFactoryHelper, ReleaseManagerHelper
         uint8 role,
         uint8 ubiRole
     ) 
-        public 
+        external 
         returns (address instance) 
     {
         instance = incomeContractUBIImplementation.cloneDeterministic(salt);
@@ -166,7 +166,7 @@ contract IncomeContractFactory is CostManagerFactoryHelper, ReleaseManagerHelper
         uint256 ubiQuantity, 
         uint256 ubiPeriod
     ) 
-        public 
+        external 
         returns (address instance) 
     {
         instance = incomeContractUBILinearImplementation.clone();
@@ -191,7 +191,7 @@ contract IncomeContractFactory is CostManagerFactoryHelper, ReleaseManagerHelper
         uint256 ubiQuantity, 
         uint256 ubiPeriod
     ) 
-        public 
+        external 
         returns (address instance) 
     {
         instance = incomeContractUBILinearImplementation.cloneDeterministic(salt);

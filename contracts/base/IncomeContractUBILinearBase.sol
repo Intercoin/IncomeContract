@@ -54,7 +54,7 @@ abstract contract IncomeContractUBILinearBase is IUBILinear, IncomeContractBase,
 
     function checkUBI(
     ) 
-        public 
+        external 
         view
         override 
         returns(uint256 ubi) 
@@ -80,7 +80,7 @@ abstract contract IncomeContractUBILinearBase is IUBILinear, IncomeContractBase,
     
     function claimUBI(
     ) 
-        public 
+        external 
         override 
         
     {

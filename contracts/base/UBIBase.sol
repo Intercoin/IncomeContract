@@ -9,7 +9,7 @@ abstract contract UBIBase is Initializable {
 
     function actualizeUBI(
     ) 
-        public 
+        external 
     {
         _actualizeUBI(msg.sender);
     }
@@ -17,7 +17,7 @@ abstract contract UBIBase is Initializable {
     function actualizeUBI(
         address account
     ) 
-        public 
+        external 
     {
         _actualizeUBI(account);
     }

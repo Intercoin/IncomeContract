@@ -77,7 +77,7 @@ abstract contract IncomeContractUBIBase is IUBI, IncomeContractBase, UBIBase {
        
     }
 
-    function getRatioMultiplier() public pure returns(uint256) {
+    function getRatioMultiplier() external pure returns(uint256) {
         return multiplier;
     }
 
@@ -149,7 +149,7 @@ abstract contract IncomeContractUBIBase is IUBI, IncomeContractBase, UBIBase {
 
     function checkUBI(
     ) 
-        public 
+        external 
         view
         override 
         returns(uint256 ubi) 
@@ -181,7 +181,7 @@ abstract contract IncomeContractUBIBase is IUBI, IncomeContractBase, UBIBase {
     
     function claimUBI(
     ) 
-        public 
+        external 
         override 
     {
 
