@@ -3,13 +3,15 @@ pragma solidity ^0.8.11;
 pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts-upgradeable/utils/structs/EnumerableSetUpgradeable.sol";
-//import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "../access/TrustedForwarder.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+//import "../access/TrustedForwarder.sol";
+import "@artman325/trustedforwarder/contracts/TrustedForwarder.sol";
+
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 
-abstract contract IncomeContractBase is TrustedForwarder, ReentrancyGuardUpgradeable {
+abstract contract IncomeContractBase is TrustedForwarder, OwnableUpgradeable, ReentrancyGuardUpgradeable {
     using EnumerableSetUpgradeable for EnumerableSetUpgradeable.AddressSet;
     
     struct Restrict {
@@ -58,6 +60,7 @@ abstract contract IncomeContractBase is TrustedForwarder, ReentrancyGuardUpgrade
         internal
         onlyInitializing
     {
+        __Ownable_init();
         __TrustedForwarder_init();
         __ReentrancyGuard_init();
         
@@ -76,7 +79,7 @@ abstract contract IncomeContractBase is TrustedForwarder, ReentrancyGuardUpgrade
     function addRecipient(
         address recipient
     ) 
-        public 
+        external 
         onlyOwner 
     {
         if (recipients[recipient].exists == false) {
@@ -92,6 +95,25 @@ abstract contract IncomeContractBase is TrustedForwarder, ReentrancyGuardUpgrade
         }
         
     }
+
+    /**
+    * @dev setup trusted forwarder address
+    * @param forwarder trustedforwarder's address to set
+    * @custom:shortd setup trusted forwarder
+    * @custom:calledby owner
+    */
+    function setTrustedForwarder(
+        address forwarder
+    ) 
+        public 
+        override
+        onlyOwner 
+        //excludeTrustedForwarder 
+    {
+        require(owner() != forwarder, "FORWARDER_CAN_NOT_BE_OWNER");
+        _setTrustedForwarder(forwarder);
+    }
+
     
     /**
      * Setup restrictions by owner
@@ -105,7 +127,7 @@ abstract contract IncomeContractBase is TrustedForwarder, ReentrancyGuardUpgrade
         address recipient,
         RestrictParam[] memory restrictions
     ) 
-        public 
+        external 
         onlyOwner 
         recipientExists(recipient)
     {
@@ -135,7 +157,7 @@ abstract contract IncomeContractBase is TrustedForwarder, ReentrancyGuardUpgrade
         address recipient, 
         address manager
     ) 
-        public 
+        external 
         onlyOwner 
     {
         recipients[recipient].managers.add(manager);
@@ -149,7 +171,7 @@ abstract contract IncomeContractBase is TrustedForwarder, ReentrancyGuardUpgrade
         address recipient, 
         address manager
     ) 
-        public 
+        external 
         onlyOwner 
     {
         recipients[recipient].managers.remove(manager);
@@ -166,7 +188,7 @@ abstract contract IncomeContractBase is TrustedForwarder, ReentrancyGuardUpgrade
         address recipient, 
         uint256 amount
     ) 
-        public 
+        external 
         recipientExists(recipient)
         canManage(recipient)
     {
@@ -189,7 +211,7 @@ abstract contract IncomeContractBase is TrustedForwarder, ReentrancyGuardUpgrade
 
     function claim(
     ) 
-        public 
+        external 
         recipientExists(_msgSender())
         nonReentrant()
     {
@@ -225,7 +247,7 @@ abstract contract IncomeContractBase is TrustedForwarder, ReentrancyGuardUpgrade
     function viewLockup(
         address recipient
     ) 
-        public 
+        external 
         view
         returns (
             uint256 maximum,
@@ -329,4 +351,29 @@ abstract contract IncomeContractBase is TrustedForwarder, ReentrancyGuardUpgrade
         restrictions = recipients[recipient].restrictions;
         
     }
+
+    function _msgSender(
+    ) 
+        internal 
+        view 
+        virtual
+        override(ContextUpgradeable, TrustedForwarder)
+        returns (address signer) 
+    {
+        return TrustedForwarder._msgSender();
+    }
+
+    
+    function _transferOwnership(
+        address newOwner
+    ) 
+        internal 
+        virtual 
+        override
+    {
+        super._transferOwnership(newOwner);
+        _setTrustedForwarder(address(0));
+    }
+
+
 }

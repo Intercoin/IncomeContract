@@ -338,8 +338,8 @@ describe("income",  async() => {
             amount: EIGHT.mul(TENIN18), 
             untilTime: timeNow+1*60*60, 
             gradual: false, 
-            //fraction: FRACTION.div(TWO)
-            fraction: FRACTION
+            fraction: FRACTION.div(TWO)
+            //fraction: FRACTION
         });
 
         await mixedCall(IncomeContractMock, trustedForwardMode, owner, 'setLockup(address,(uint256,uint256,bool,uint32)[])', [accountOne.address, t1]);
@@ -347,7 +347,7 @@ describe("income",  async() => {
         
         // pass 1 hour
         await passTime(1*60*60);
-         
+
         await mixedCall(IncomeContractMock, trustedForwardMode, accountFive, 'pay(address,uint256)', [accountOne.address, EIGHT.mul(TENIN18)]);
         await mixedCall(IncomeContractMock, trustedForwardMode, accountFive, 'pay(address,uint256)', [accountTwo.address, EIGHT.mul(TENIN18)]);
 

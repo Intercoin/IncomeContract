@@ -5,7 +5,7 @@ interface IIncomeContractUBI {
     function init(
         address token, // can be address(0) = 0x0000000000000000000000000000000000000000   mean   ETH
         address community,
-        string memory roleName,
-        string memory ubiRoleName
+        uint8 role,
+        uint8 ubiRole
     ) external;
 }

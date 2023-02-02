@@ -5,7 +5,7 @@ interface IIncomeContractUBILinear {
     function init(
         address token_,
         address community_,
-        string memory ubiRoleName_,
+        uint8 ubiRole_,
         uint256 ubiQuantity_, 
         uint256 ubiPeriod_
     ) external;

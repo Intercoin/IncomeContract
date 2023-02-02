@@ -7,7 +7,9 @@ import "@openzeppelin/contracts-upgradeable/utils/structs/EnumerableSetUpgradeab
 import "../lib/DateTime.sol";
 
 import "../interfaces/IUBILinear.sol";
-import "../interfaces/ICommunity.sol";
+//import "../interfaces/ICommunity.sol";
+import "@artman325/community/contracts/interfaces/ICommunity.sol";
+
 
 import "../base/IncomeContractBase.sol";
 import "./UBIBase.sol";
@@ -25,9 +27,6 @@ abstract contract IncomeContractUBILinearBase is IUBILinear, IncomeContractBase,
         bool exists;
     }
     
-    ICommunity private community;
-    string private ubiRoleName;
-
     uint256 private startDateIndex;
 
     uint256 public ubiQuantity;
@@ -35,15 +34,10 @@ abstract contract IncomeContractUBILinearBase is IUBILinear, IncomeContractBase,
 
     mapping(address => UBIStruct) users;
 
-    function canObtainUBI() internal view override {
-        bool s = _canRecord(ubiRoleName);
-        require(s == true, "Sender has not in accessible List");
-    }
-
     function __IncomeContractUBILinearBase_init(
         address token_, // can be address(0) = 0x0000000000000000000000000000000000000000   mean   ETH
         address community_,
-        string memory ubiRoleName_,
+        uint8 ubiRole_,
         uint256 ubiQuantity_, 
         uint256 ubiPeriod_
     )  
@@ -51,8 +45,7 @@ abstract contract IncomeContractUBILinearBase is IUBILinear, IncomeContractBase,
         onlyInitializing
     {
         __IncomeContract_init(token_);
-        community = ICommunity(community_);
-        ubiRoleName = ubiRoleName_;
+        __UBIBase_init(community_, ubiRole_); 
         ubiQuantity = ubiQuantity_;
         ubiPeriod = ubiPeriod_;
 
@@ -61,7 +54,7 @@ abstract contract IncomeContractUBILinearBase is IUBILinear, IncomeContractBase,
 
     function checkUBI(
     ) 
-        public 
+        external 
         view
         override 
         returns(uint256 ubi) 
@@ -87,12 +80,13 @@ abstract contract IncomeContractUBILinearBase is IUBILinear, IncomeContractBase,
     
     function claimUBI(
     ) 
-        public 
+        external 
         override 
         
     {
-        canObtainUBI();
+        
         address sender = _msgSender();
+        canObtainUBI(sender);
         _actualizeUBI(sender);
         uint256 toPay = users[sender].total - users[sender].claimed;
         require(toPay > 0, "Amount exceeds balance available to claim");
@@ -141,17 +135,6 @@ abstract contract IncomeContractUBILinearBase is IUBILinear, IncomeContractBase,
         uint256 min = (block.timestamp).getMinute();
         uint256 s = (block.timestamp).getMinute();
         dateIndex = DateTime.toTimestamp(y, m, d, h, min, s);
-    }
-
-    function _canRecord(string memory roleName) private view returns(bool s){
-        s = false;
-        string[] memory roles = ICommunity(community).getRoles(_msgSender());
-        for (uint256 i=0; i< roles.length; i++) {
-            
-            if (keccak256(abi.encodePacked(roleName)) == keccak256(abi.encodePacked(roles[i]))) {
-                s = true;
-            }
-        }
     }
 
 }
