@@ -3,12 +3,11 @@ pragma solidity ^0.8.0;
 pragma experimental ABIEncoderV2;
 
 import "../IncomeContractUBI.sol";
-import "../interfaces/ICommunity.sol";
 import "../lib/StringUtils.sol";
 
 contract IncomeContractUBIMock is IncomeContractUBI {
     using StringUtils for string;
-    
+   
     // function getTest() public view returns(uint256){
     //      return
     //             uint256(

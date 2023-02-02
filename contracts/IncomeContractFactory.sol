@@ -111,21 +111,21 @@ contract IncomeContractFactory is CostManagerFactoryHelper, ReleaseManagerHelper
     /**
      * @param token  token address of eth
      * @param community address of community contract
-     * @param roleName role of contracts who can send stats of prices and ratios
-     * @param ubiRoleName role of EOA which can obtain ubi
+     * @param role role of contracts who can send stats of prices and ratios
+     * @param ubiRole role of EOA which can obtain ubi
      */
     function produce(
         address token,
         address community,
-        string memory roleName,
-        string memory ubiRoleName
+        uint8 role,
+        uint8 ubiRole
     ) 
         public 
         returns (address instance) 
     {
         instance = incomeContractUBIImplementation.clone();
         _produce(instance);
-        IIncomeContractUBI(instance).init(token, community, roleName, ubiRoleName);
+        IIncomeContractUBI(instance).init(token, community, role, ubiRole);
         Ownable(instance).transferOwnership(msg.sender);
     }
 
@@ -133,70 +133,70 @@ contract IncomeContractFactory is CostManagerFactoryHelper, ReleaseManagerHelper
      * @dev cloneDeterministic version
      * @param token  token address of eth
      * @param community address of community contract
-     * @param roleName role of contracts who can send stats of prices and ratios
-     * @param ubiRoleName role of EOA which can obtain ubi
+     * @param role role of contracts who can send stats of prices and ratios
+     * @param ubiRole role of EOA which can obtain ubi
      */
     function produceDeterministic(
         bytes32 salt,
         address token,
         address community,
-        string memory roleName,
-        string memory ubiRoleName
+        uint8 role,
+        uint8 ubiRole
     ) 
         public 
         returns (address instance) 
     {
         instance = incomeContractUBIImplementation.cloneDeterministic(salt);
         _produce(instance);
-        IIncomeContractUBI(instance).init(token, community, roleName, ubiRoleName);
+        IIncomeContractUBI(instance).init(token, community, role, ubiRole);
         Ownable(instance).transferOwnership(msg.sender);
     }
 
     /**
-     * @param token_ token address of eth
-     * @param community_ address of community contract
-     * @param ubiRoleName_ role of EOA which can obtain ubi
-     * @param ubiQuantity_ ubi's amount for period `ubiPeriod_`
-     * @param ubiPeriod_ period for `ubiQuantity_`
+     * @param token token address of eth
+     * @param community address of community contract
+     * @param ubiRole role of EOA which can obtain ubi
+     * @param ubiQuantity ubi's amount for period `ubiPeriod_`
+     * @param ubiPeriod period for `ubiQuantity_`
      */
     function produce(
-        address token_,
-        address community_,
-        string memory ubiRoleName_,
-        uint256 ubiQuantity_, 
-        uint256 ubiPeriod_
+        address token,
+        address community,
+        uint8 ubiRole,
+        uint256 ubiQuantity, 
+        uint256 ubiPeriod
     ) 
         public 
         returns (address instance) 
     {
         instance = incomeContractUBILinearImplementation.clone();
         _produce(instance);
-        IIncomeContractUBILinear(instance).init(token_, community_, ubiRoleName_, ubiQuantity_, ubiPeriod_);
+        IIncomeContractUBILinear(instance).init(token, community, ubiRole, ubiQuantity, ubiPeriod);
         Ownable(instance).transferOwnership(msg.sender);
     }
 
     /**
      * @dev cloneDeterministic version
-     * @param token_ token address of eth
-     * @param community_ address of community contract
-     * @param ubiRoleName_ role of EOA which can obtain ubi
-     * @param ubiQuantity_ ubi's amount for period `ubiPeriod_`
-     * @param ubiPeriod_ period for `ubiQuantity_`
+     * @param token token address of eth
+     * @param community address of community contract
+     * @param ubiRole role of EOA which can obtain ubi
+     * @param ubiQuantity ubi's amount for period `ubiPeriod_`
+     * @param ubiPeriod period for `ubiQuantity_`
      */
     function produceDeterministic(
         bytes32 salt,
-        address token_,
-        address community_,
-        string memory ubiRoleName_,
-        uint256 ubiQuantity_, 
-        uint256 ubiPeriod_
+        address token,
+        address community,
+        uint8 ubiRole,
+        uint256 ubiQuantity, 
+        uint256 ubiPeriod
     ) 
         public 
         returns (address instance) 
     {
         instance = incomeContractUBILinearImplementation.cloneDeterministic(salt);
         _produce(instance);
-        IIncomeContractUBILinear(instance).init(token_, community_, ubiRoleName_, ubiQuantity_, ubiPeriod_);
+        IIncomeContractUBILinear(instance).init(token, community, ubiRole, ubiQuantity, ubiPeriod);
         Ownable(instance).transferOwnership(msg.sender);
     }
 

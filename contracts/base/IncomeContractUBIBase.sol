@@ -7,16 +7,15 @@ import "@openzeppelin/contracts-upgradeable/utils/structs/EnumerableSetUpgradeab
 import "../lib/DateTime.sol";
 
 import "../interfaces/IUBI.sol";
-import "../interfaces/ICommunity.sol";
+
 
 import "../base/IncomeContractBase.sol";
 import "./UBIBase.sol";
 
 abstract contract IncomeContractUBIBase is IUBI, IncomeContractBase, UBIBase {
     
-    ICommunity private communityAddress;
-    string private communityRole;
-    string private communityUBIRole;
+    
+    uint8 internal communityStatsRole;
     
     uint256 constant sampleSize = 10;
     uint256 constant multiplier = 1e6;
@@ -59,40 +58,25 @@ abstract contract IncomeContractUBIBase is IUBI, IncomeContractBase, UBIBase {
     }
     mapping(address => UBIStruct) users;
     
-    modifier canRecord() {
-        bool s = _canRecord(communityRole);
-        
-        require(s == true, "Sender has not in accessible List");
-        _;
-    }
-    
-    function canObtainUBI() internal view override {
-        bool s = _canRecord(communityUBIRole);
-        require(s == true, "Sender has not in accessible List");
-    }
-   
 
     function __IncomeContractUBI_init(
         address token, // can be address(0) = 0x0000000000000000000000000000000000000000   mean   ETH
-        address community,
-        string memory roleName,
-        string memory ubiRoleName
+        address communityAddress,
+        uint8 statsRole,
+        uint8 ubiRole
     )  
         internal
         onlyInitializing
     {
         tagsIndex = 1;
         __IncomeContract_init(token);
-
-        communityAddress = ICommunity(community);
-        communityRole = roleName;
-        communityUBIRole = ubiRoleName;
+        __UBIBase_init(communityAddress, ubiRole); 
+        communityStatsRole = statsRole;
         
         startDateIndex = getCurrentDateIndex();
-
-        
+       
     }
-    
+
     function getRatioMultiplier() public pure returns(uint256) {
         return multiplier;
     }
@@ -102,10 +86,10 @@ abstract contract IncomeContractUBIBase is IUBI, IncomeContractBase, UBIBase {
         bytes32 tag, 
         uint256 ratio
     ) 
-        canRecord() 
         external 
         override 
     {
+        canRecord(_msgSender(), communityStatsRole);
         createTag(tag);
         _record(tag,int256(ratio));
         
@@ -119,10 +103,10 @@ abstract contract IncomeContractUBIBase is IUBI, IncomeContractBase, UBIBase {
         bytes32[] calldata tags, 
         uint256[] calldata ratios
     ) 
-        canRecord() 
         external 
         override 
     {
+        canRecord(_msgSender(), communityStatsRole);
         uint256 dateIndex = getCurrentDateIndex();
         for (uint256 i=0; i<tags.length; i++) {
             createTag(tags[i]);
@@ -136,10 +120,10 @@ abstract contract IncomeContractUBIBase is IUBI, IncomeContractBase, UBIBase {
         bytes32 tag, 
         uint256 price
     ) 
-        canRecord() 
         external 
         override 
     {
+        canRecord(_msgSender(), communityStatsRole);
         uint256 dateIndex = getCurrentDateIndex();
         createTag(tag);
         avgPrices[tag][dateIndex] = price;
@@ -151,10 +135,10 @@ abstract contract IncomeContractUBIBase is IUBI, IncomeContractBase, UBIBase {
         bytes32[] calldata tags, 
         uint256[] calldata prices
     ) 
-        canRecord() 
         external 
         override 
     {
+        canRecord(_msgSender(), communityStatsRole);
         uint256 dateIndex = getCurrentDateIndex();
         for (uint256 i=0; i<tags.length; i++) {
             createTag(tags[i]);
@@ -200,11 +184,9 @@ abstract contract IncomeContractUBIBase is IUBI, IncomeContractBase, UBIBase {
         public 
         override 
     {
-        
-        canObtainUBI();
 
         address sender = _msgSender();
-
+        canObtainUBI(sender);
         _actualizeUBI(sender);
         uint256 toPay = users[sender].total - users[sender].claimed;
         require(toPay / multiplier > 0, "Amount exceeds balance available to claim");
@@ -243,16 +225,6 @@ abstract contract IncomeContractUBIBase is IUBI, IncomeContractBase, UBIBase {
 
     }
     
-    function _canRecord(string memory roleName) private view returns(bool s){
-        s = false;
-        string[] memory roles = ICommunity(communityAddress).getRoles(_msgSender());
-        for (uint256 i=0; i< roles.length; i++) {
-            
-            if (keccak256(abi.encodePacked(roleName)) == keccak256(abi.encodePacked(roles[i]))) {
-                s = true;
-            }
-        }
-    }
     
     function setUBI(
         uint256 dateIndex

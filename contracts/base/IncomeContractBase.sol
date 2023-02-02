@@ -3,13 +3,15 @@ pragma solidity ^0.8.11;
 pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts-upgradeable/utils/structs/EnumerableSetUpgradeable.sol";
-//import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "../access/TrustedForwarder.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+//import "../access/TrustedForwarder.sol";
+import "@artman325/trustedforwarder/contracts/TrustedForwarder.sol";
+
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 
-abstract contract IncomeContractBase is TrustedForwarder, ReentrancyGuardUpgradeable {
+abstract contract IncomeContractBase is TrustedForwarder, OwnableUpgradeable, ReentrancyGuardUpgradeable {
     using EnumerableSetUpgradeable for EnumerableSetUpgradeable.AddressSet;
     
     struct Restrict {
@@ -91,6 +93,24 @@ abstract contract IncomeContractBase is TrustedForwarder, ReentrancyGuardUpgrade
 
         }
         
+    }
+
+    /**
+    * @dev setup trusted forwarder address
+    * @param forwarder trustedforwarder's address to set
+    * @custom:shortd setup trusted forwarder
+    * @custom:calledby owner
+    */
+    function setTrustedForwarder(
+        address forwarder
+    ) 
+        public 
+        override
+        onlyOwner 
+        //excludeTrustedForwarder 
+    {
+        require(owner() != forwarder, "FORWARDER_CAN_NOT_BE_OWNER");
+        _setTrustedForwarder(forwarder);
     }
     
     /**
@@ -328,5 +348,16 @@ abstract contract IncomeContractBase is TrustedForwarder, ReentrancyGuardUpgrade
         allowedByManager = recipients[recipient].amountPaid;
         restrictions = recipients[recipient].restrictions;
         
+    }
+
+    function _msgSender(
+    ) 
+        internal 
+        view 
+        virtual
+        override(ContextUpgradeable, TrustedForwarder)
+        returns (address signer) 
+    {
+        return TrustedForwarder._msgSender();
     }
 }
