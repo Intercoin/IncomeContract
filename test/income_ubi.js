@@ -23,8 +23,8 @@ const TENIN18 = TEN.pow(BigNumber.from('18'));
 
 const FRACTION = BigNumber.from('100000');
 const RATE_MULTIPLIER = BigNumber.from('1000000');
-const MEMBERSROLE= 'members';
-const UBIROLE = 'members'
+const MEMBERSROLE= 1;//'members';
+const UBIROLE = 2;//'members'
 const NO_COSTMANAGER = ZERO_ADDRESS;
 
 chai.use(require('chai-bignumber')());
@@ -117,7 +117,7 @@ describe("IncomeContractUBI",  async() => {
     if (FactoryMode && !trustedForwardMode) {  
     it("should produce deterministic", async() => {
         const salt    = "0x00112233445566778899AABBCCDDEEFF00000000000000000000000000000000";
-        let tx = await IncomeContractFactory.connect(owner)["produceDeterministic(bytes32,address,address,string,string)"](
+        let tx = await IncomeContractFactory.connect(owner)["produceDeterministic(bytes32,address,address,uint8,uint8)"](
             salt,
             (ETHMode) ? ZERO_ADDRESS : ERC20MintableToken.address, 
             CommunityMockInstance.address, 
@@ -130,7 +130,7 @@ describe("IncomeContractUBI",  async() => {
         //let [instance,] = event.args;
         
         await expect(
-            IncomeContractFactory.connect(owner)["produceDeterministic(bytes32,address,address,string,string)"](
+            IncomeContractFactory.connect(owner)["produceDeterministic(bytes32,address,address,uint8,uint8)"](
                 salt,
                 (ETHMode) ? ZERO_ADDRESS : ERC20MintableToken.address, 
                 CommunityMockInstance.address, 
@@ -145,7 +145,7 @@ describe("IncomeContractUBI",  async() => {
 
     it(""+(trustedForwardMode ? '[trusted forwarder]' : '')+(FactoryMode ? "Factory " : "")+"tests simple lifecycle ("+(ETHMode ? "ETH" : "ERC20")+")", async() => {
         if (FactoryMode == true) {
-            let tx = await IncomeContractFactory.connect(owner)["produce(address,address,string,string)"](
+            let tx = await IncomeContractFactory.connect(owner)["produce(address,address,uint8,uint8)"](
                 (ETHMode) ? ZERO_ADDRESS : ERC20MintableToken.address, 
                 CommunityMockInstance.address, 
                 MEMBERSROLE, 
@@ -327,7 +327,7 @@ describe("IncomeContractUBI",  async() => {
         let avg1,avg2,avg3,tmp,tmp1,balanceAccountTwoBefore,balanceAccountTwoAfter,avgRatio,ubiVal;
         
         if (FactoryMode == true) {
-            let tx = await IncomeContractFactory.connect(owner)["produce(address,address,string,string)"](
+            let tx = await IncomeContractFactory.connect(owner)["produce(address,address,uint8,uint8)"](
                 ERC20MintableToken.address, 
                 CommunityMockInstance.address, 
                 MEMBERSROLE, 
@@ -359,6 +359,12 @@ describe("IncomeContractUBI",  async() => {
         var SomeExternalContractMockInstance = await SomeExternalContractMockFactory.connect(owner).deploy(IncomeContractUBIMockInstance.address);
 
         var ratioMultiplier = await IncomeContractUBIMockInstance.connect(accountTwo).getRatioMultiplier();
+
+        await expect(
+            SomeExternalContractMockInstance.connect(accountTwo).setRatio('price', TEN)
+        ).to.be.revertedWith("Sender has not in accessible List");
+
+        await CommunityMockInstance.setRoles(SomeExternalContractMockInstance.address, [MEMBERSROLE]);
 
         // set ratio  0.4,0.5,0.6
         // set avg price 1 token
@@ -392,7 +398,10 @@ describe("IncomeContractUBI",  async() => {
 
   
         balanceAccountTwoBefore = await ERC20MintableToken.balanceOf(accountFive.address);
-        
+
+        await mixedCall(IncomeContractUBIMockInstance, trustedForwardMode, accountFive, 'claimUBI()', [], "Sender has not in accessible List");
+        await CommunityMockInstance.setRoles(accountFive.address, [UBIROLE]);
+
         await mixedCall(IncomeContractUBIMockInstance, trustedForwardMode, accountFive, 'claimUBI()', []);
         balanceAccountTwoAfter = await ERC20MintableToken.balanceOf(accountFive.address);
       
@@ -512,7 +521,7 @@ describe("IncomeContractUBI",  async() => {
     describe("TrustedForwarder", function () {
         var IncomeContractUBIMockInstance;
         beforeEach("deploying", async() => {
-            let tx = await IncomeContractFactory.connect(owner)["produce(address,address,string,string)"](
+            let tx = await IncomeContractFactory.connect(owner)["produce(address,address,uint8,uint8)"](
                 ZERO_ADDRESS, 
                 CommunityMockInstance.address, 
                 MEMBERSROLE, 

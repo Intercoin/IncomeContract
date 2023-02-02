@@ -60,6 +60,7 @@ abstract contract IncomeContractBase is TrustedForwarder, OwnableUpgradeable, Re
         internal
         onlyInitializing
     {
+        __Ownable_init();
         __TrustedForwarder_init();
         __ReentrancyGuard_init();
         
@@ -112,6 +113,7 @@ abstract contract IncomeContractBase is TrustedForwarder, OwnableUpgradeable, Re
         require(owner() != forwarder, "FORWARDER_CAN_NOT_BE_OWNER");
         _setTrustedForwarder(forwarder);
     }
+
     
     /**
      * Setup restrictions by owner
@@ -360,4 +362,18 @@ abstract contract IncomeContractBase is TrustedForwarder, OwnableUpgradeable, Re
     {
         return TrustedForwarder._msgSender();
     }
+
+    
+    function _transferOwnership(
+        address newOwner
+    ) 
+        internal 
+        virtual 
+        override
+    {
+        super._transferOwnership(newOwner);
+        _setTrustedForwarder(address(0));
+    }
+
+
 }

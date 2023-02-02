@@ -24,7 +24,7 @@ const TENIN18 = TEN.pow(BigNumber.from('18'));
 const FRACTION = BigNumber.from('100000');
 
 //const RATE_MULTIPLIER = BigNumber.from('1000000');
-const UBIROLE = 'members';
+const UBIROLE = 2;//'members';
 const UBIQuantity = THREE.mul(TENIN18)//.mul(RATE_MULTIPLIER);
 const UBIPeriod = BigNumber.from(3*60*60); // 3 hours
 const NO_COSTMANAGER = ZERO_ADDRESS;
@@ -130,7 +130,7 @@ describe("IncomeContractUBILinear",  async() => {
     if (FactoryMode && !trustedForwardMode) {
     it("should produce deterministic", async() => {
         const salt    = "0x00112233445566778899AABBCCDDEEFF00000000000000000000000000000000";
-        let tx = await IncomeContractFactory.connect(owner)["produceDeterministic(bytes32,address,address,string,uint256,uint256)"](
+        let tx = await IncomeContractFactory.connect(owner)["produceDeterministic(bytes32,address,address,uint8,uint256,uint256)"](
             salt,
             (ETHMode) ? ZERO_ADDRESS : ERC20MintableToken.address, 
             CommunityMockInstance.address, 
@@ -144,7 +144,7 @@ describe("IncomeContractUBILinear",  async() => {
         //let [instance,] = event.args;
         
         await expect(
-            IncomeContractFactory.connect(owner)["produceDeterministic(bytes32,address,address,string,uint256,uint256)"](
+            IncomeContractFactory.connect(owner)["produceDeterministic(bytes32,address,address,uint8,uint256,uint256)"](
                 salt,
                 (ETHMode) ? ZERO_ADDRESS : ERC20MintableToken.address, 
                 CommunityMockInstance.address, 
@@ -160,7 +160,7 @@ describe("IncomeContractUBILinear",  async() => {
 
     it(""+(trustedForwardMode ? '[trusted forwarder]' : '')+(FactoryMode ? "Factory " : "")+"tests simple lifecycle ("+(ETHMode ? "ETH" : "ERC20")+")", async() => {
         if (FactoryMode == true) {
-            let tx = await IncomeContractFactory.connect(owner)["produce(address,address,string,uint256,uint256)"](
+            let tx = await IncomeContractFactory.connect(owner)["produce(address,address,uint8,uint256,uint256)"](
                 (ETHMode) ? ZERO_ADDRESS : ERC20MintableToken.address, 
                 CommunityMockInstance.address, 
                 UBIROLE,
@@ -336,7 +336,7 @@ describe("IncomeContractUBILinear",  async() => {
     it(""+(trustedForwardMode ? '[trusted forwarder]' : '')+(FactoryMode ? "Factory " : "")+'test UBI(short)', async () => {
         let avg1,avg2,avg3,tmp,tmp1,balanceAccountTwoBefore,balanceAccountTwoAfter,avgRatio,ubiVal,timePassed;
         if (FactoryMode == true) {
-            let tx = await IncomeContractFactory.connect(owner)["produce(address,address,string,uint256,uint256)"](
+            let tx = await IncomeContractFactory.connect(owner)["produce(address,address,uint8,uint256,uint256)"](
                 ERC20MintableToken.address, 
                 CommunityMockInstance.address, 
                 UBIROLE,
@@ -384,7 +384,11 @@ describe("IncomeContractUBILinear",  async() => {
         expect(tmp).to.be.eq(ubiVal);
 
   
+
         balanceAccountTwoBefore = await ERC20MintableToken.balanceOf(accountFive.address);
+        await mixedCall(IncomeContractUBILinearInstance, trustedForwardMode, accountFive, 'claimUBI()', [], "Sender has not in accessible List");
+
+        await CommunityMockInstance.setRoles(accountFive.address, [UBIROLE]);
         await mixedCall(IncomeContractUBILinearInstance, trustedForwardMode, accountFive, 'claimUBI()', []);
         balanceAccountTwoAfter = await ERC20MintableToken.balanceOf(accountFive.address);
         
@@ -439,7 +443,7 @@ describe("IncomeContractUBILinear",  async() => {
     describe("TrustedForwarder", function () {
         var IncomeContractUBILinearInstance;
         beforeEach("deploying", async() => {
-            let tx = await IncomeContractFactory.connect(owner)["produce(address,address,string,uint256,uint256)"](
+            let tx = await IncomeContractFactory.connect(owner)["produce(address,address,uint8,uint256,uint256)"](
                 ZERO_ADDRESS,
                 CommunityMockInstance.address, 
                 UBIROLE,
