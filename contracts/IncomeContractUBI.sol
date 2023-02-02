@@ -10,19 +10,19 @@ contract IncomeContractUBI is IncomeContractUBIBase, IIncomeContractUBI {
     /**
      * @param token  token address of eth
      * @param community address of community contract
-     * @param roleName role of contracts who can send stats of prices and ratios
-     * @param ubiRoleName role of EOA which can obtain ubi
+     * @param role role of contracts who can send stats of prices and ratios
+     * @param ubiRole role of EOA which can obtain ubi
      */
     function init(
         address token, // can be address(0) = 0x0000000000000000000000000000000000000000   mean   ETH
         address community,
-        string memory roleName,
-        string memory ubiRoleName
+        uint8 role,
+        uint8 ubiRole
     )
         public 
         initializer 
     {
-        __IncomeContractUBI_init(token, community, roleName, ubiRoleName);
+        __IncomeContractUBI_init(token, community, role, ubiRole);
     }
 
     
