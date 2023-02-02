@@ -171,9 +171,9 @@ abstract contract IncomeContractBase is TrustedForwarder, ReentrancyGuardUpgrade
         canManage(recipient)
     {
         
-        (uint256 maximum, uint256 paid, uint256 locked, uint256 allowedByManager, ) = _viewLockup(recipient);
+        (uint256 maximum, uint256 claimed, uint256 locked, uint256 allowedByManager, ) = _viewLockup(recipient);
         
-        uint256 availableUnlocked = maximum - paid - locked;
+        uint256 availableUnlocked = maximum - claimed - locked;
         
         require (amount > 0, "Amount can not be a zero");
 
@@ -217,7 +217,7 @@ abstract contract IncomeContractBase is TrustedForwarder, ReentrancyGuardUpgrade
      * View restrictions setup by owner
      * @param recipient recipient
      * @return maximum maximum
-     * @return paid paid
+     * @return claimed claimed
      * @return locked locked
      * @return allowedByManager allowedByManager
      * 
@@ -229,13 +229,13 @@ abstract contract IncomeContractBase is TrustedForwarder, ReentrancyGuardUpgrade
         view
         returns (
             uint256 maximum,
-            uint256 paid,
+            uint256 claimed,
             uint256 locked,
             uint256 allowedByManager
         )
     {
         require(recipients[recipient].exists == true, "NO_SUCH_RECIPIENT");
-        (maximum, paid, locked,allowedByManager,) = _viewLockup(recipient);
+        (maximum, claimed, locked,allowedByManager,) = _viewLockup(recipient);
     }
     
     /**
@@ -315,7 +315,7 @@ abstract contract IncomeContractBase is TrustedForwarder, ReentrancyGuardUpgrade
         view
         returns (
             uint256 maximum,
-            uint256 paid,
+            uint256 claimed,
             uint256 locked,
             uint256 allowedByManager,
             Restrict[] memory restrictions
@@ -323,7 +323,7 @@ abstract contract IncomeContractBase is TrustedForwarder, ReentrancyGuardUpgrade
     {
         
         maximum = recipients[recipient].amountMax;
-        paid = recipients[recipient].amountClaimed;
+        claimed = recipients[recipient].amountClaimed;
         locked = _calcLock(recipients[recipient].restrictions);
         allowedByManager = recipients[recipient].amountPaid;
         restrictions = recipients[recipient].restrictions;
