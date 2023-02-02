@@ -41,8 +41,8 @@ abstract contract IncomeContractBase is TrustedForwarder, ReentrancyGuardUpgrade
     struct Recipient {
         address addr;
         uint256 amountMax;
-        uint256 amountPaid;
-        uint256 amountAllowedByManager;
+        uint256 amountClaimed; //means how funds recipient have claimed already
+        uint256 amountPaid;     // means how funds manager have paid to recipient
         Restrict[] restrictions;
         EnumerableSetUpgradeable.AddressSet managers;
         bool exists;
@@ -83,8 +83,8 @@ abstract contract IncomeContractBase is TrustedForwarder, ReentrancyGuardUpgrade
             recipients[recipient].exists = true;
             recipients[recipient].addr = recipient;
             recipients[recipient].amountMax = 0;
+            recipients[recipient].amountClaimed = 0;
             recipients[recipient].amountPaid = 0;
-            recipients[recipient].amountAllowedByManager = 0;
             
             
            // recipients[recipient].gradual = false;
@@ -171,16 +171,16 @@ abstract contract IncomeContractBase is TrustedForwarder, ReentrancyGuardUpgrade
         canManage(recipient)
     {
         
-        (uint256 maximum, uint256 paid, uint256 locked, uint256 allowedByManager, ) = _viewLockup(recipient);
+        (uint256 maximum, uint256 claimed, uint256 locked, uint256 allowedByManager, ) = _viewLockup(recipient);
         
-        uint256 availableUnlocked = maximum - paid - locked;
+        uint256 availableUnlocked = maximum - claimed - locked;
         
         require (amount > 0, "Amount can not be a zero");
 
         require (amount <= availableUnlocked, "AMOUNT_EXCEEDS_BALANCE");
         require (amount <= availableUnlocked - allowedByManager, "AMOUNT_EXCEEDS_RATE");
         
-        recipients[recipient].amountAllowedByManager = recipients[recipient].amountAllowedByManager + amount;
+        recipients[recipient].amountPaid = recipients[recipient].amountPaid + amount;
         
     }
     
@@ -203,8 +203,8 @@ abstract contract IncomeContractBase is TrustedForwarder, ReentrancyGuardUpgrade
         // 40 20 0 10 => 40 30 0 0
         require (amount > 0, "NOTHING_AVAILABLE_TO_CLAIM");
 
-        recipients[ms].amountAllowedByManager = 0;
-        recipients[ms].amountPaid = recipients[ms].amountPaid + amount;
+        recipients[ms].amountPaid = 0;
+        recipients[ms].amountClaimed = recipients[ms].amountClaimed + amount;
         bool success = _claim(ms, amount);
 
         require(success == true, "NOT_ENOUGH_FUNDS");
@@ -217,7 +217,7 @@ abstract contract IncomeContractBase is TrustedForwarder, ReentrancyGuardUpgrade
      * View restrictions setup by owner
      * @param recipient recipient
      * @return maximum maximum
-     * @return paid paid
+     * @return claimed claimed
      * @return locked locked
      * @return allowedByManager allowedByManager
      * 
@@ -229,13 +229,13 @@ abstract contract IncomeContractBase is TrustedForwarder, ReentrancyGuardUpgrade
         view
         returns (
             uint256 maximum,
-            uint256 paid,
+            uint256 claimed,
             uint256 locked,
             uint256 allowedByManager
         )
     {
         require(recipients[recipient].exists == true, "NO_SUCH_RECIPIENT");
-        (maximum, paid, locked,allowedByManager,) = _viewLockup(recipient);
+        (maximum, claimed, locked,allowedByManager,) = _viewLockup(recipient);
     }
     
     /**
@@ -315,7 +315,7 @@ abstract contract IncomeContractBase is TrustedForwarder, ReentrancyGuardUpgrade
         view
         returns (
             uint256 maximum,
-            uint256 paid,
+            uint256 claimed,
             uint256 locked,
             uint256 allowedByManager,
             Restrict[] memory restrictions
@@ -323,9 +323,9 @@ abstract contract IncomeContractBase is TrustedForwarder, ReentrancyGuardUpgrade
     {
         
         maximum = recipients[recipient].amountMax;
-        paid = recipients[recipient].amountPaid;
+        claimed = recipients[recipient].amountClaimed;
         locked = _calcLock(recipients[recipient].restrictions);
-        allowedByManager = recipients[recipient].amountAllowedByManager;
+        allowedByManager = recipients[recipient].amountPaid;
         restrictions = recipients[recipient].restrictions;
         
     }

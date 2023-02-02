@@ -52,7 +52,7 @@ abstract contract IncomeContractUBIBase is IUBI, IncomeContractBase, UBIBase {
     
     struct UBIStruct {
         uint256 lastIndex;
-        uint256 payed;
+        uint256 claimed;
         uint256 total;
         uint256 prevUBI;
         bool exists;
@@ -173,7 +173,7 @@ abstract contract IncomeContractUBIBase is IUBI, IncomeContractBase, UBIBase {
         address sender = _msgSender();
 
         uint256 lastIndex = users[sender].lastIndex;
-        uint256 payed = users[sender].payed;
+        uint256 claimed = users[sender].claimed;
         uint256 total = users[sender].total;
         uint256 prevUBI = users[sender].prevUBI;
         
@@ -191,7 +191,7 @@ abstract contract IncomeContractUBIBase is IUBI, IncomeContractBase, UBIBase {
             lastIndex = i + DateTime.DAY_IN_SECONDS;
             
         }
-        ubi =  (total - payed) / multiplier;
+        ubi =  (total - claimed) / multiplier;
 
     }
     
@@ -206,9 +206,9 @@ abstract contract IncomeContractUBIBase is IUBI, IncomeContractBase, UBIBase {
         address sender = _msgSender();
 
         _actualizeUBI(sender);
-        uint256 toPay = users[sender].total - users[sender].payed;
+        uint256 toPay = users[sender].total - users[sender].claimed;
         require(toPay / multiplier > 0, "Amount exceeds balance available to claim");
-        users[sender].payed = users[sender].payed + toPay;
+        users[sender].claimed = users[sender].claimed + toPay;
         bool success = _claim(sender, toPay / multiplier);
         require(success == true, "NOT_ENOUGH_FUNDS");
         
@@ -223,7 +223,7 @@ abstract contract IncomeContractUBIBase is IUBI, IncomeContractBase, UBIBase {
     {
         if (users[account].exists == false) {
             users[account].lastIndex = startDateIndex;
-            users[account].payed = 0;
+            users[account].claimed = 0;
             users[account].total = 0;
             users[account].prevUBI = 0;
             users[account].exists = true;
@@ -239,7 +239,7 @@ abstract contract IncomeContractUBIBase is IUBI, IncomeContractBase, UBIBase {
             users[account].lastIndex = i + DateTime.DAY_IN_SECONDS;
             
         }
-        ubi =  (users[account].total - users[account].payed) / multiplier;
+        ubi =  (users[account].total - users[account].claimed) / multiplier;
 
     }
     
