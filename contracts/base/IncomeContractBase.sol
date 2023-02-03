@@ -97,11 +97,11 @@ abstract contract IncomeContractBase is TrustedForwarder, OwnableUpgradeable, Re
     }
 
     /**
-    * @dev setup trusted forwarder address
-    * @param forwarder trustedforwarder's address to set
-    * @custom:shortd setup trusted forwarder
-    * @custom:calledby owner
-    */
+     * @dev setup trusted forwarder address
+     * @param forwarder trustedforwarder's address to set
+     * @custom:shortd setup trusted forwarder
+     * @custom:calledby owner
+     */
     function setTrustedForwarder(
         address forwarder
     ) 
@@ -132,12 +132,16 @@ abstract contract IncomeContractBase is TrustedForwarder, OwnableUpgradeable, Re
         recipientExists(recipient)
     {
 
+        //uint256 restrictionIndexesLength = recipients[recipient].restrictionIndexes.length();
+
         for (uint256 i = 0; i < restrictions.length; i++ ) {
             // add to amountMax
             recipients[recipient].amountMax = recipients[recipient].amountMax + restrictions[i].amount;
             
+            
             // adding restriction
             require(restrictions[i].untilTime > block.timestamp, "untilTime");
+            
             recipients[recipient].restrictions.push(Restrict({
                 amount: restrictions[i].amount,
                 startTime: block.timestamp,
@@ -145,6 +149,13 @@ abstract contract IncomeContractBase is TrustedForwarder, OwnableUpgradeable, Re
                 gradual: restrictions[i].gradual,
                 fraction: restrictions[i].fraction
             }));
+            
+            // recipients[recipient].restrictions[i+restrictionIndexesLength].amount = restrictions[i].amount;
+            // recipients[recipient].restrictions[i+restrictionIndexesLength].startTime = block.timestamp;
+            // recipients[recipient].restrictions[i+restrictionIndexesLength].untilTime = restrictions[i].untilTime;
+            // recipients[recipient].restrictions[i+restrictionIndexesLength].gradual = restrictions[i].gradual;
+            // recipients[recipient].restrictions[i+restrictionIndexesLength].fraction = restrictions[i].fraction;
+            
             
         }
     }
@@ -217,6 +228,7 @@ abstract contract IncomeContractBase is TrustedForwarder, OwnableUpgradeable, Re
     {
         address ms = _msgSender();
         
+        _cleanLockup(ms);
         (,, uint256 locked, uint256 allowedByManager, ) = _viewLockup(ms);
         
         uint256 amount = (recipients[ms].managers.length() > 0 && recipients[ms].managers.at(0) == ms)
@@ -325,6 +337,46 @@ abstract contract IncomeContractBase is TrustedForwarder, OwnableUpgradeable, Re
             }
         }
     
+    }
+
+    /**
+    * @dev clean up restriction array if untilTime <= block.timestamp 
+    */
+    function _cleanLockup(
+        address recipient
+    ) 
+        internal 
+    {
+        uint256 len = recipients[recipient].restrictions.length;
+
+        if (len == 0) {
+            return;
+        }
+
+        uint256 leni = len;
+        for (uint256 i = len; i != 0; i--) {
+            
+            if (recipients[recipient].restrictions[i-1].untilTime <= block.timestamp) {
+
+                // 1,2,3,4,x --> 1,2,3,4
+                // 1,2,x,4,5 --> 1,2,5,4
+
+                delete recipients[recipient].restrictions[i-1];
+                //test[(i-1)] = test[leni-1];
+                recipients[recipient].restrictions[i-1] = recipients[recipient].restrictions[leni-1];
+                leni=leni-1;
+                recipients[recipient].restrictions.pop();
+
+       
+                // recipients[recipient].restrictions.push(Restrict({
+                //     amount: restrictions[i].amount,
+                //     startTime: block.timestamp,
+                //     untilTime: restrictions[i].untilTime,
+                //     gradual: restrictions[i].gradual,
+                //     fraction: restrictions[i].fraction
+                // }));
+            }
+        }
     }
     
     /**
