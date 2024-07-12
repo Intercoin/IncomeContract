@@ -43,14 +43,33 @@ async function main() {
         data_object = data_object_root[hre.network.name];
     }
 	//----------------
+    var signers = await ethers.getSigners();
 
-	const [deployer] = await ethers.getSigners();
-	
+    const provider = ethers.provider;
+	var deployer,
+        deployer_auxiliary,
+        deployer_releasemanager,
+        deployer_income;
+    if (signers.length == 1) {
+        
+        deployer = signers[0];
+        deployer_auxiliary = signers[0];
+        deployer_releasemanager = signers[0];
+        deployer_income = signers[0];
+    } else {
+        [
+            deployer,
+            deployer_auxiliary,
+            deployer_releasemanager,
+            deployer_income
+        ] = signers;
+    }
+
 	const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
     const RELEASE_MANAGER = process.env.RELEASE_MANAGER;
 	console.log(
 		"Deploying contracts with the account:",
-		deployer.address
+		deployer_auxiliary.address
 	);
 
 	// var options = {
@@ -58,17 +77,21 @@ async function main() {
 	// 	gasLimit: 10e6
 	// };
 
-	const deployerBalanceBefore = await deployer.getBalance();
+	const deployerBalanceBefore = await deployer_auxiliary.getBalance();
     console.log("Account balance:", (deployerBalanceBefore).toString());
 
 	const IncomeContractF = await ethers.getContractFactory("IncomeContract");
     const IncomeContractUBIF = await ethers.getContractFactory("IncomeContractUBI");
 	const IncomeContractUBILinearF = await ethers.getContractFactory("IncomeContractUBILinear");
 	    
-	let implementationIncomeContract            = await IncomeContractF.connect(deployer).deploy();
-    let implementationIncomeContractUBI         = await IncomeContractUBIF.connect(deployer).deploy();
-	let implementationIncomeContractUBILinear   = await IncomeContractUBILinearF.connect(deployer).deploy();
+	let implementationIncomeContract            = await IncomeContractF.connect(deployer_auxiliary).deploy();
+    let implementationIncomeContractUBI         = await IncomeContractUBIF.connect(deployer_auxiliary).deploy();
+	let implementationIncomeContractUBILinear   = await IncomeContractUBILinearF.connect(deployer_auxiliary).deploy();
 	
+    await implementationIncomeContract.wait();
+    await implementationIncomeContractUBI.wait();
+    await implementationIncomeContractUBILinear.wait();
+
 	console.log("Implementations:");
 	console.log("  IncomeContract deployed at:          ", implementationIncomeContract.address);
     console.log("  IncomeContractUBI deployed at:       ", implementationIncomeContractUBI.address);
@@ -81,7 +104,7 @@ async function main() {
 	data_object.implementationIncomeContractUBILinear   = implementationIncomeContractUBILinear.address;
     data_object.releaseManager	        = RELEASE_MANAGER;
 
-    const deployerBalanceAfter = await deployer.getBalance();
+    const deployerBalanceAfter = await deployer_auxiliary.getBalance();
     console.log("Spent:", ethers.utils.formatEther(deployerBalanceBefore.sub(deployerBalanceAfter)));
     console.log("gasPrice:", ethers.utils.formatUnits((await network.provider.send("eth_gasPrice")), "gwei")," gwei");
 
@@ -93,6 +116,11 @@ async function main() {
     let data_to_write = JSON.stringify(data_object_root, null, 2);
 	console.log(data_to_write);
     await write_data(data_to_write);
+
+    console.log('verifying');
+    await hre.run("verify:verify", {address: data_object.implementationIncomeContract, constructorArguments: []});
+    await hre.run("verify:verify", {address: data_object.implementationIncomeContractUBI, constructorArguments: [], contract: "contracts/IncomeContractUBI.sol:IncomeContractUBI"});
+    await hre.run("verify:verify", {address: data_object.implementationIncomeContractUBILinear, constructorArguments: []});
 }
 
 main()

@@ -44,12 +44,31 @@ async function main() {
 		throw("Arguments file: wrong addresses");
 	}
 
-	const [deployer] = await ethers.getSigners();
+	var signers = await ethers.getSigners();
+    const provider = ethers.provider;
+	var deployer,
+        deployer_auxiliary,
+        deployer_releasemanager,
+        deployer_income;
+    if (signers.length == 1) {
+        
+        deployer = signers[0];
+        deployer_auxiliary = signers[0];
+        deployer_releasemanager = signers[0];
+        deployer_income = signers[0];
+    } else {
+        [
+            deployer,
+            deployer_auxiliary,
+            deployer_releasemanager,
+            deployer_income
+        ] = signers;
+    }
 	
 	const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
 	console.log(
 		"Deploying contracts with the account:",
-		deployer.address
+		deployer_income.address
 	);
 
 	var options = {
@@ -69,21 +88,40 @@ async function main() {
 		options
 	]
 
-	const deployerBalanceBefore = await deployer.getBalance();
+	const deployerBalanceBefore = await deployer_income.getBalance();
 	console.log("Account balance:", (deployerBalanceBefore).toString());
 
 	const IncomeContractFactoryF = await ethers.getContractFactory("IncomeContractFactory");
 
-	this.factory = await IncomeContractFactoryF.connect(deployer).deploy(...params);
+	this.factory = await IncomeContractFactoryF.connect(deployer_income).deploy(...params);
 
 	console.log("Factory deployed at:", this.factory.address);
 	console.log("with params:", [..._params]);
 
 	console.log("registered with release manager:", data_object.releaseManager);
 
-	const deployerBalanceAfter = await deployer.getBalance();
+	const releaseManager = await ethers.getContractAt("ReleaseManager",data_object.releaseManager);
+    let txNewRelease = await releaseManager.connect(deployer_releasemanager).newRelease(
+        [this.factory.address], 
+        [
+            [
+                5,//uint8 factoryIndex; 
+                5,//uint16 releaseTag; 
+                "0x53696c766572000000000000000000000000000000000000"//bytes24 factoryChangeNotes;
+            ]
+        ]
+    );
+
+    console.log('newRelease - waiting');
+    await txNewRelease.wait(3);
+    console.log('newRelease - mined');
+
+	const deployerBalanceAfter = await deployer_income.getBalance();
 	console.log("Spent:", ethers.utils.formatEther(deployerBalanceBefore.sub(deployerBalanceAfter)));
 	console.log("gasPrice:", ethers.utils.formatUnits((await network.provider.send("eth_gasPrice")), "gwei")," gwei");
+
+	console.log('verifying');
+    await hre.run("verify:verify", {address: this.factory.address, constructorArguments: _params});
 }
 
 main()

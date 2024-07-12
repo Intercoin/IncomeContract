@@ -28,58 +28,58 @@ module.exports = {
   networks: {
     hardhat: {
       allowUnlimitedContractSize: false,
-      forking: {
-        url: mainnetURL,
-        blockNumber: 13539017
-      }
+      //[mainnetURL]
+      chainId: 1,
+      forking: {url: mainnetURL}
+      // //[bscURL]
+      // chainId: 56,
+      // forking: {url: bscURL}
+      // //[maticURL]
+      // chainId: 137,
+      // forking: {url: maticURL}
     },
-    kovan: {
-      url: kovanURL,
-      chainId: 42,
-      gas: 12000000,
-      accounts: {mnemonic: process.env.MNEMONIC},
-      saveDeployments: true
-    },
-    goerli: {
-      url: goerliURL,
-      chainId: 5,
-      gasPrice: 1000,
-      accounts: {mnemonic: process.env.MNEMONIC},
-      saveDeployments: true
-    },
-    rinkeby: {
-      url: rinkebyURL,
-      chainId: 4,
-      gasPrice: "auto",
-      accounts: {mnemonic: process.env.MNEMONIC},
-      saveDeployments: true
-    },
+
     bsc: {
       url: bscURL,
       chainId: 56,
-      gasPrice: "auto",
-      accounts: {mnemonic: process.env.MNEMONIC},
+      //gasPrice: "auto",
+      accounts: [
+        process.env.private_key,
+        process.env.private_key_auxiliary,
+        process.env.private_key_releasemanager,
+        process.env.private_key_income
+      ],
       saveDeployments: true
     },
     bsctest: {
       url: bsctestURL,
       chainId: 97,
-      gasPrice: "auto",
-      accounts: {mnemonic: process.env.MNEMONIC},
+      //gasPrice: "auto",
+      accounts: [process.env.private_key],
       saveDeployments: true
     },
     matic: {
       url: maticURL,
       chainId: 137,
-      gasPrice: "auto",
-      accounts: {mnemonic: process.env.MNEMONIC},
+      //gasPrice: "auto",
+      accounts: [
+        process.env.private_key,
+        process.env.private_key_auxiliary,
+        process.env.private_key_releasemanager,
+        process.env.private_key_income
+      ],
       saveDeployments: true
     },
     mainnet: {
       url: mainnetURL,
       chainId: 1,
-      gasPrice: 20000000000,
-      accounts: {mnemonic: process.env.MNEMONIC},
+      gasPrice: 3_000000000,
+      accounts: [
+        process.env.private_key,
+        process.env.private_key_auxiliary,
+        process.env.private_key_releasemanager,
+        process.env.private_key_income
+      ],
       saveDeployments: true
     }
   },
@@ -95,9 +95,11 @@ module.exports = {
     currency: "USD"
   },
   etherscan: {
-    apiKey: process.env.MATIC_API_KEY
-    //apiKey: process.env.ETHERSCAN_API_KEY
-    //apiKey: process.env.BSCSCAN_API_KEY
+    apiKey: {
+      polygon: process.env.MATIC_API_KEY,
+      mainnet: process.env.ETHERSCAN_API_KEY,
+      bsc: process.env.BSCSCAN_API_KEY
+    }
   },
   solidity: {
     compilers: [
