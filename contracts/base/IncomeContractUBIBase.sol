@@ -63,13 +63,15 @@ abstract contract IncomeContractUBIBase is IUBI, IncomeContractBase, UBIBase {
         address token, // can be address(0) = 0x0000000000000000000000000000000000000000   mean   ETH
         address communityAddress,
         uint8 statsRole,
-        uint8 ubiRole
+        uint8 ubiRole,
+        address costManager,
+        address producedBy
     )  
         internal
         onlyInitializing
     {
         tagsIndex = 1;
-        __IncomeContract_init(token);
+        __IncomeContract_init(token, costManager, producedBy);
         __UBIBase_init(communityAddress, ubiRole); 
         communityStatsRole = statsRole;
         

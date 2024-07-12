@@ -7,6 +7,8 @@ interface IIncomeContractUBILinear {
         address community_,
         uint8 ubiRole_,
         uint256 ubiQuantity_, 
-        uint256 ubiPeriod_
+        uint256 ubiPeriod_,
+        address costManager_,
+        address producedBy_
     ) external;
 }

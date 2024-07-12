@@ -8,7 +8,7 @@ import "../lib/DateTime.sol";
 
 import "../interfaces/IUBILinear.sol";
 //import "../interfaces/ICommunity.sol";
-import "@artman325/community/contracts/interfaces/ICommunity.sol";
+import "@intercoin/community/contracts/interfaces/ICommunity.sol";
 
 
 import "../base/IncomeContractBase.sol";
@@ -39,12 +39,14 @@ abstract contract IncomeContractUBILinearBase is IUBILinear, IncomeContractBase,
         address community_,
         uint8 ubiRole_,
         uint256 ubiQuantity_, 
-        uint256 ubiPeriod_
+        uint256 ubiPeriod_,
+        address costManager_,
+        address producedBy_
     )  
         internal
         onlyInitializing
     {
-        __IncomeContract_init(token_);
+        __IncomeContract_init(token_, costManager_, producedBy_);
         __UBIBase_init(community_, ubiRole_); 
         ubiQuantity = ubiQuantity_;
         ubiPeriod = ubiPeriod_;
