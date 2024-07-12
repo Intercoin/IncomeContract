@@ -3,8 +3,8 @@ pragma solidity ^0.8.11;
 
 import "@openzeppelin/contracts/proxy/Clones.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@artman325/releasemanager/contracts/CostManagerFactoryHelper.sol";
-import "@artman325/releasemanager/contracts/ReleaseManagerHelper.sol";
+import "@intercoin/releasemanager/contracts/CostManagerFactoryHelper.sol";
+import "@intercoin/releasemanager/contracts/ReleaseManagerHelper.sol";
 //import "./interfaces/IControlContract.sol";
 import "./interfaces/IIncomeContract.sol";
 import "./interfaces/IIncomeContractUBI.sol";
@@ -87,7 +87,7 @@ contract IncomeContractFactory is CostManagerFactoryHelper, ReleaseManagerHelper
     {
         instance = incomeContractImplementation.clone();
         _produce(instance);
-        IIncomeContract(instance).init(token);
+        IIncomeContract(instance).init(token, costManager, msg.sender);
         Ownable(instance).transferOwnership(msg.sender);
     }
 
@@ -104,7 +104,7 @@ contract IncomeContractFactory is CostManagerFactoryHelper, ReleaseManagerHelper
     {
         instance = incomeContractImplementation.cloneDeterministic(salt);
         _produce(instance);
-        IIncomeContract(instance).init(token);
+        IIncomeContract(instance).init(token, costManager, msg.sender);
         Ownable(instance).transferOwnership(msg.sender);
     }
 
@@ -125,7 +125,7 @@ contract IncomeContractFactory is CostManagerFactoryHelper, ReleaseManagerHelper
     {
         instance = incomeContractUBIImplementation.clone();
         _produce(instance);
-        IIncomeContractUBI(instance).init(token, community, role, ubiRole);
+        IIncomeContractUBI(instance).init(token, community, role, ubiRole, costManager, msg.sender);
         Ownable(instance).transferOwnership(msg.sender);
     }
 
@@ -148,7 +148,7 @@ contract IncomeContractFactory is CostManagerFactoryHelper, ReleaseManagerHelper
     {
         instance = incomeContractUBIImplementation.cloneDeterministic(salt);
         _produce(instance);
-        IIncomeContractUBI(instance).init(token, community, role, ubiRole);
+        IIncomeContractUBI(instance).init(token, community, role, ubiRole, costManager, msg.sender);
         Ownable(instance).transferOwnership(msg.sender);
     }
 
@@ -171,7 +171,7 @@ contract IncomeContractFactory is CostManagerFactoryHelper, ReleaseManagerHelper
     {
         instance = incomeContractUBILinearImplementation.clone();
         _produce(instance);
-        IIncomeContractUBILinear(instance).init(token, community, ubiRole, ubiQuantity, ubiPeriod);
+        IIncomeContractUBILinear(instance).init(token, community, ubiRole, ubiQuantity, ubiPeriod, costManager, msg.sender);
         Ownable(instance).transferOwnership(msg.sender);
     }
 
@@ -196,7 +196,7 @@ contract IncomeContractFactory is CostManagerFactoryHelper, ReleaseManagerHelper
     {
         instance = incomeContractUBILinearImplementation.cloneDeterministic(salt);
         _produce(instance);
-        IIncomeContractUBILinear(instance).init(token, community, ubiRole, ubiQuantity, ubiPeriod);
+        IIncomeContractUBILinear(instance).init(token, community, ubiRole, ubiQuantity, ubiPeriod, costManager, msg.sender);
         Ownable(instance).transferOwnership(msg.sender);
     }
 

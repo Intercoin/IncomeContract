@@ -111,10 +111,10 @@ describe("IncomeContractUBI",  async() => {
     });
 
     for (const trustedForwardMode of [false,trustedForwarder]) {
-    for ( const FactoryMode of [true, false]) {
+
     for ( const ETHMode of [true, false]) {
 
-    if (FactoryMode && !trustedForwardMode) {  
+    if (!trustedForwardMode) {  
     it("should produce deterministic", async() => {
         const salt    = "0x00112233445566778899AABBCCDDEEFF00000000000000000000000000000000";
         let tx = await IncomeContractFactory.connect(owner)["produceDeterministic(bytes32,address,address,uint8,uint8)"](
@@ -143,28 +143,18 @@ describe("IncomeContractUBI",  async() => {
     });
     }
 
-    it(""+(trustedForwardMode ? '[trusted forwarder]' : '')+(FactoryMode ? "Factory " : "")+"tests simple lifecycle ("+(ETHMode ? "ETH" : "ERC20")+")", async() => {
-        if (FactoryMode == true) {
-            let tx = await IncomeContractFactory.connect(owner)["produce(address,address,uint8,uint8)"](
-                (ETHMode) ? ZERO_ADDRESS : ERC20MintableToken.address, 
-                CommunityMockInstance.address, 
-                MEMBERSROLE, 
-                UBIROLE
-            );
-            const rc = await tx.wait(); // 0ms, as tx is already confirmed
-            const event = rc.events.find(event => event.event === 'InstanceCreated');
-            const [instance,] = event.args;
+    it(""+(trustedForwardMode ? '[trusted forwarder]' : '')+"Factory tests simple lifecycle ("+(ETHMode ? "ETH" : "ERC20")+")", async() => {
+        let tx = await IncomeContractFactory.connect(owner)["produce(address,address,uint8,uint8)"](
+            (ETHMode) ? ZERO_ADDRESS : ERC20MintableToken.address, 
+            CommunityMockInstance.address, 
+            MEMBERSROLE, 
+            UBIROLE
+        );
+        const rc = await tx.wait(); // 0ms, as tx is already confirmed
+        const event = rc.events.find(event => event.event === 'InstanceCreated');
+        const [instance,] = event.args;
 
-            IncomeContractUBIMockInstance = await ethers.getContractAt("IncomeContractUBIMock",instance);
-        } else {
-
-            await IncomeContractUBIMockInstance.connect(owner).init(
-                (ETHMode) ? ZERO_ADDRESS : ERC20MintableToken.address, 
-                CommunityMockInstance.address, 
-                MEMBERSROLE, 
-                UBIROLE
-            );
-        }
+        IncomeContractUBIMockInstance = await ethers.getContractAt("IncomeContractUBIMock",instance);
 
         if (trustedForwardMode) {
             await IncomeContractUBIMockInstance.connect(owner).setTrustedForwarder(trustedForwarder.address);
@@ -323,31 +313,21 @@ describe("IncomeContractUBI",  async() => {
     });
     }
     
-    it(""+(trustedForwardMode ? '[trusted forwarder]' : '')+(FactoryMode ? "Factory " : "")+'test UBI(short)', async () => {
+    it(""+(trustedForwardMode ? '[trusted forwarder]' : '')+'Factory test UBI(short)', async () => {
         let avg1,avg2,avg3,tmp,tmp1,balanceAccountTwoBefore,balanceAccountTwoAfter,avgRatio,ubiVal;
         
-        if (FactoryMode == true) {
-            let tx = await IncomeContractFactory.connect(owner)["produce(address,address,uint8,uint8)"](
-                ERC20MintableToken.address, 
-                CommunityMockInstance.address, 
-                MEMBERSROLE, 
-                UBIROLE
-            );
-            const rc = await tx.wait(); // 0ms, as tx is already confirmed
-            const event = rc.events.find(event => event.event === 'InstanceCreated');
-            const [instance,] = event.args;
+        let tx = await IncomeContractFactory.connect(owner)["produce(address,address,uint8,uint8)"](
+            ERC20MintableToken.address, 
+            CommunityMockInstance.address, 
+            MEMBERSROLE, 
+            UBIROLE
+        );
+        const rc = await tx.wait(); // 0ms, as tx is already confirmed
+        const event = rc.events.find(event => event.event === 'InstanceCreated');
+        const [instance,] = event.args;
 
-            IncomeContractUBIMockInstance = await ethers.getContractAt("IncomeContractUBIMock",instance);
-        } else {
-
-            await IncomeContractUBIMockInstance.connect(owner).init(
-                ERC20MintableToken.address, 
-                CommunityMockInstance.address, 
-                MEMBERSROLE, 
-                UBIROLE
-            );
-        }
-
+        IncomeContractUBIMockInstance = await ethers.getContractAt("IncomeContractUBIMock",instance);
+        
         if (trustedForwardMode) {
             await IncomeContractUBIMockInstance.connect(owner).setTrustedForwarder(trustedForwarder.address);
         }
@@ -514,7 +494,7 @@ describe("IncomeContractUBI",  async() => {
         
     });
     
-    }
+
     }
 
     

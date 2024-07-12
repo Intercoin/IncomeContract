@@ -7,9 +7,9 @@
     "test": "test"
   },
   "dependencies": {
-    "@artman325/community": "^1.1.4",
-    "@artman325/releasemanager": "^2.0.0",
-    "@artman325/trustedforwarder": "^1.0.1",
+    "@intercoin/community": "^1.2.2",
+    "@intercoin/releasemanager": "^2.2.1",
+    "@intercoin/trustedforwarder": "^1.0.1",
     "@openzeppelin/contracts": "^4.5.0",
     "@openzeppelin/contracts-upgradeable": "^4.5.2",
     "@openzeppelin/test-helpers": "^0.5.15",

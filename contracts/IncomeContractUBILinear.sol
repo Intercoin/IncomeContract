@@ -13,18 +13,22 @@ contract IncomeContractUBILinear is IncomeContractUBILinearBase, IIncomeContract
      * @param ubiRole_ role of EOA which can obtain ubi
      * @param ubiQuantity_ ubi's amount for period `ubiPeriod_`
      * @param ubiPeriod_ period for `ubiQuantity_`
+     * @param costManager_ costManager address
+     * @param producedBy_ producedBy address
      */
     function init(
         address token_,
         address community_,
         uint8 ubiRole_,
         uint256 ubiQuantity_, 
-        uint256 ubiPeriod_
+        uint256 ubiPeriod_,
+        address costManager_,
+        address producedBy_
     )
-        public 
+        external 
         initializer 
     {
-        __IncomeContractUBILinearBase_init(token_, community_, ubiRole_, ubiQuantity_, ubiPeriod_);
+        __IncomeContractUBILinearBase_init(token_, community_, ubiRole_, ubiQuantity_, ubiPeriod_, costManager_, producedBy_);
     }
 
     

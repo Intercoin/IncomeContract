@@ -92,10 +92,10 @@ describe("income",  async() => {
     });
 
     for (const trustedForwardMode of [false,trustedForwarder]) {
-    for ( const FactoryMode of [true, false]) {
+
     for ( const ETHMode of [true, false]) {
 
-    if (FactoryMode && !trustedForwardMode) {  
+    if (!trustedForwardMode) {  
     it("should produce deterministic", async() => {
         const salt    = "0x00112233445566778899AABBCCDDEEFF00000000000000000000000000000000";
 
@@ -120,18 +120,15 @@ describe("income",  async() => {
     });
     }
 
-    it(""+(trustedForwardMode ? '[trusted forwarder]' : '')+(FactoryMode ? "Factory " : "")+"tests simple lifecycle ("+(ETHMode ? "ETH" : "ERC20")+")", async() => {
+    it(""+(trustedForwardMode ? '[trusted forwarder]' : '')+"Factory tests simple lifecycle ("+(ETHMode ? "ETH" : "ERC20")+")", async() => {
 
-        if (FactoryMode == true) {
-            let tx = await IncomeContractFactory.connect(owner)["produce(address)"]((ETHMode) ? ZERO_ADDRESS : ERC20MintableToken.address);
-            const rc = await tx.wait(); // 0ms, as tx is already confirmed
-            const event = rc.events.find(event => event.event === 'InstanceCreated');
-            const [instance,] = event.args;
+        let tx = await IncomeContractFactory.connect(owner)["produce(address)"]((ETHMode) ? ZERO_ADDRESS : ERC20MintableToken.address);
+        const rc = await tx.wait(); // 0ms, as tx is already confirmed
+        const event = rc.events.find(event => event.event === 'InstanceCreated');
+        const [instance,] = event.args;
 
-            IncomeContractMock = await ethers.getContractAt("IncomeContractMock",instance);
-        } else {
-            await IncomeContractMock.connect(owner).init((ETHMode) ? ZERO_ADDRESS : ERC20MintableToken.address);
-        }
+        IncomeContractMock = await ethers.getContractAt("IncomeContractMock",instance);
+        
 
         if (trustedForwardMode) {
             await IncomeContractMock.connect(owner).setTrustedForwarder(trustedForwarder.address);
@@ -296,18 +293,14 @@ describe("income",  async() => {
     });
     }
     
-    
-    it(""+(trustedForwardMode ? '[trusted forwarder]' : '')+(FactoryMode ? "Factory " : "")+'test error enough funds. adding and clamin afterwards ', async () => {
-        if (FactoryMode == true) {
-            let tx = await IncomeContractFactory.connect(owner)["produce(address)"](ERC20MintableToken.address);
-            const rc = await tx.wait(); // 0ms, as tx is already confirmed
-            const event = rc.events.find(event => event.event === 'InstanceCreated');
-            const [instance,] = event.args;
+    it(""+(trustedForwardMode ? '[trusted forwarder]' : '')+("Factory test error enough funds. adding and clamin afterwards "), async () => {
 
-            IncomeContractMock = await ethers.getContractAt("IncomeContractMock",instance);
-        } else {
-            await IncomeContractMock.connect(owner).init(ERC20MintableToken.address);
-        }
+        let tx = await IncomeContractFactory.connect(owner)["produce(address)"](ERC20MintableToken.address);
+        const rc = await tx.wait(); // 0ms, as tx is already confirmed
+        const event = rc.events.find(event => event.event === 'InstanceCreated');
+        const [instance,] = event.args;
+
+        IncomeContractMock = await ethers.getContractAt("IncomeContractMock",instance);
 
         if (trustedForwardMode) {
             await IncomeContractMock.connect(owner).setTrustedForwarder(trustedForwarder.address);
@@ -376,7 +369,7 @@ describe("income",  async() => {
         // 'Balance at Contract wrong after claim'
         expect(balanceIncomeContractMockBefore).to.be.eq(balanceIncomeContractMockAfter.add(EIGHT.mul(TENIN18)));
     });
-    }
+
     }
 
     describe("TrustedForwarder", function () {

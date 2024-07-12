@@ -6,6 +6,8 @@ interface IIncomeContractUBI {
         address token, // can be address(0) = 0x0000000000000000000000000000000000000000   mean   ETH
         address community,
         uint8 role,
-        uint8 ubiRole
+        uint8 ubiRole,
+        address costManager,
+        address producedBy
     ) external;
 }

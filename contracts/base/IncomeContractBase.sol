@@ -5,13 +5,14 @@ pragma experimental ABIEncoderV2;
 import "@openzeppelin/contracts-upgradeable/utils/structs/EnumerableSetUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 //import "../access/TrustedForwarder.sol";
-import "@artman325/trustedforwarder/contracts/TrustedForwarder.sol";
+import "@intercoin/trustedforwarder/contracts/TrustedForwarder.sol";
+import "@intercoin/releasemanager/contracts/CostManagerHelper.sol";
 
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 
-abstract contract IncomeContractBase is TrustedForwarder, OwnableUpgradeable, ReentrancyGuardUpgradeable {
+abstract contract IncomeContractBase is TrustedForwarder, OwnableUpgradeable, ReentrancyGuardUpgradeable, CostManagerHelper {
     using EnumerableSetUpgradeable for EnumerableSetUpgradeable.AddressSet;
     
     struct Restrict {
@@ -53,9 +54,18 @@ abstract contract IncomeContractBase is TrustedForwarder, OwnableUpgradeable, Re
     mapping(address => Recipient) recipients;
     address tokenAddr;
 
-    
+    uint8 internal constant OPERATION_SHIFT_BITS = 240; // 256 - 16
+    // Constants representing operations
+    uint8 internal constant OPERATION_INITIALIZE = 0x0;
+
+    constructor() {
+        _disableInitializers();
+    }
+
     function __IncomeContract_init(
-        address token // can be address(0) = 0x0000000000000000000000000000000000000000   mean   ETH
+        address token, // can be address(0) = 0x0000000000000000000000000000000000000000   mean   ETH
+        address costManager,
+        address producedBy
     ) 
         internal
         onlyInitializing
@@ -63,8 +73,16 @@ abstract contract IncomeContractBase is TrustedForwarder, OwnableUpgradeable, Re
         __Ownable_init();
         __TrustedForwarder_init();
         __ReentrancyGuard_init();
+
+        __CostManagerHelper_init(_msgSender(), costManager);
         
         tokenAddr = token;
+
+        _accountForOperation(
+            OPERATION_INITIALIZE << OPERATION_SHIFT_BITS,
+            uint256(uint160(producedBy)),
+            0
+        );
     }
     
     receive() external payable {
