@@ -1,13 +1,13 @@
 {
   "hardhat": {
     "time_created": 1675102413360,
-    "implementationIncomeContract": "0x49AeF2C4005Bf572665b09014A563B5b9E46Df21",
-    "implementationIncomeContractUBI": "0xa9efDEf197130B945462163a0B852019BA529a66",
-    "implementationIncomeContractUBILinear": "0x06786bCbc114bbfa670E30A1AC35dFd1310Be82f",
+    "implementationIncomeContract": "0xf342D22125Eddc24c6c3D716E048388D1415C20d",
+    "implementationIncomeContractUBI": "0x9687796759CAbecC1674A4Aaf23889fC9EC2FCA2",
+    "implementationIncomeContractUBILinear": "0xD63c1597435d2E16d7f216A12A3dA65B3bF12241",
     "releaseManager": "0xccfefc930c5960d195f04a5a9a1bf6a155fcd671",
-    "time_updated": 1720742773160
+    "time_updated": 1720832329855
   },
-  "time_updated": 1720743587530,
+  "time_updated": 1720832329855,
   "mainnet": {
     "time_created": 1720743585707,
     "implementationIncomeContract": "0xd7558c227329c220149186dc735ac32074f0c1ff",

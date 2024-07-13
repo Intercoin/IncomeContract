@@ -1,16 +1,5 @@
-require('dotenv').config()
-
-require("@nomiclabs/hardhat-ethers")
-// require("hardhat-docgen")
-// require("@hardhat-docgen/core")
-// //require("@hardhat-docgen/markdown")
-// require("./docgen-custom-markdown")
-require('hardhat-deploy')
-require("@nomiclabs/hardhat-waffle")
-require("@nomiclabs/hardhat-web3")
-require("@nomiclabs/hardhat-etherscan")
-require("solidity-coverage")
-require("hardhat-gas-reporter")
+require('dotenv').config();
+require("@nomicfoundation/hardhat-toolbox");
 
 
 const kovanURL = `https://eth-kovan.alchemyapi.io/v2/${process.env.ALCHEMY_KOVAN}`

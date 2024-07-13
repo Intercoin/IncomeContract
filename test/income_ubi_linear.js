@@ -1,36 +1,31 @@
-const { ethers, waffle } = require('hardhat');
-const { BigNumber } = require('ethers');
 const { expect } = require('chai');
-const chai = require('chai');
-const { time } = require('@openzeppelin/test-helpers');
+const { time, loadFixture } = require("@nomicfoundation/hardhat-toolbox/network-helpers");
+require("@nomicfoundation/hardhat-chai-matchers");
 const mixedCall = require('../js/mixedCall.js');
 
 const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
 const DEAD_ADDRESS = '0x000000000000000000000000000000000000dEaD';
 
-const ZERO = BigNumber.from('0');
-const ONE = BigNumber.from('1');
-const TWO = BigNumber.from('2');
-const THREE = BigNumber.from('3');
-const FOURTH = BigNumber.from('4');
-const SIX = BigNumber.from('6');
-const EIGHT = BigNumber.from('8');
-const NINE = BigNumber.from('9');
-const TEN = BigNumber.from('10');
-const HUN = BigNumber.from('100');
+const ZERO = BigInt('0');
+const ONE = BigInt('1');
+const TWO = BigInt('2');
+const THREE = BigInt('3');
+const FOURTH = BigInt('4');
+const SIX = BigInt('6');
+const EIGHT = BigInt('8');
+const NINE = BigInt('9');
+const TEN = BigInt('10');
+const HUN = BigInt('100');
 
-const TENIN18 = TEN.pow(BigNumber.from('18'));
+const TENIN18 = ethers.parseEther('1');
 
-const FRACTION = BigNumber.from('100000');
+const FRACTION = BigInt('100000');
 
-//const RATE_MULTIPLIER = BigNumber.from('1000000');
+//const RATE_MULTIPLIER = BigInt('1000000');
 const UBIROLE = 2;//'members';
-const UBIQuantity = THREE.mul(TENIN18)//.mul(RATE_MULTIPLIER);
-const UBIPeriod = BigNumber.from(3*60*60); // 3 hours
+const UBIQuantity = THREE * (TENIN18)// * (RATE_MULTIPLIER);
+const UBIPeriod = BigInt(3*60*60); // 3 hours
 const NO_COSTMANAGER = ZERO_ADDRESS;
-
-chai.use(require('chai-bignumber')());
-
 
 var passTime = async(seconds) => {
     if (typeof(seconds) === 'undefined') {
@@ -42,26 +37,22 @@ var passTime = async(seconds) => {
     await ethers.provider.send('evm_increaseTime', [seconds]);
     await ethers.provider.send('evm_mine');
 }
+var owner;
+var accountOne;
+var accountTwo;
+var accountThree;
+var accountFourth;
+var accountFive;
+var accountSix;
+var accountSeven;
+var accountEight;
+var accountNine;
+var accountTen;
+var accountEleven;
+var trustedForwarder;
 
-describe("IncomeContractUBILinear",  async() => {
-    const accounts = waffle.provider.getWallets();
+describe("IncomeContractUBILinear",  function() {
 
-    // Setup accounts.
-    const owner = accounts[0];    
-    const accountOne = accounts[1];
-    const accountTwo = accounts[2];  
-    const accountThree = accounts[3];
-    const accountFourth= accounts[4];
-    const accountFive = accounts[5];
-    const accountSix = accounts[6];
-    const accountSeven = accounts[7];
-    const accountEight = accounts[8];
-    const accountNine = accounts[9];
-    const accountTen = accounts[10];
-    const accountEleven = accounts[11];
-    const trustedForwarder = accounts[12];
-
-   
     // setup useful values
     const oneEther = 1000000000000000000; // 1eth
     const oneToken = 1000000000000000000; // 1token = 1e18
@@ -76,18 +67,28 @@ describe("IncomeContractUBILinear",  async() => {
 
     
     beforeEach("deploying", async() => {
+        const accounts = await ethers.getSigners();
+        // Setup accounts.
+        owner = accounts[0];    
+        accountOne = accounts[1];
+        accountTwo = accounts[2];  
+        accountFourth= accounts[4];
+        accountFive = accounts[5];
+        accountNine = accounts[9];
+        trustedForwarder = accounts[12];
+
         // make snapshot before time manipulations
         snapId = await ethers.provider.send('evm_snapshot', []);
         
         ReleaseManagerFactoryF= await ethers.getContractFactory("MockReleaseManagerFactory")
         ReleaseManagerF = await ethers.getContractFactory("MockReleaseManager");
         let implementationReleaseManager    = await ReleaseManagerF.deploy();
-        let releaseManagerFactory   = await ReleaseManagerFactoryF.connect(owner).deploy(implementationReleaseManager.address);
+        let releaseManagerFactory   = await ReleaseManagerFactoryF.connect(owner).deploy(implementationReleaseManager.target);
         let tx,rc,event,instance,instancesCount;
         //
         tx = await releaseManagerFactory.connect(owner).produce();
         rc = await tx.wait(); // 0ms, as tx is already confirmed
-        event = rc.events.find(event => event.event === 'InstanceProduced');
+        event = rc.logs.find(event => event.fragment && event.fragment.name=== 'InstanceProduced');
         [instance, instancesCount] = event.args;
         let releaseManager = await ethers.getContractAt("MockReleaseManager",instance);
 
@@ -108,11 +109,11 @@ describe("IncomeContractUBILinear",  async() => {
         IncomeContractUBILinearInstance = await IncomeContractUBILinearFactory.connect(owner).deploy();
 
         IncomeContractFactory = await IncomeContractFactoryFactory.connect(owner).deploy(
-            IncomeContractMock.address,
-            IncomeContractUBIMockInstance.address,
-            IncomeContractUBILinearInstance.address,
+            IncomeContractMock.target,
+            IncomeContractUBIMockInstance.target,
+            IncomeContractUBILinearInstance.target,
             NO_COSTMANAGER,
-            releaseManager.address
+            releaseManager.target
         );
         //-----------------
     });
@@ -123,30 +124,30 @@ describe("IncomeContractUBILinear",  async() => {
         //console.log(`afterEach("deploying"`);
     });
 
-    for (const trustedForwardMode of [false,trustedForwarder]) {
+    for (const trustedForwardMode of [false,true]) {
 
     for ( const ETHMode of [true, false]) {
-    if (FactoryMode && !trustedForwardMode) {
+    if (!trustedForwardMode) {
     it("should produce deterministic", async() => {
         const salt    = "0x00112233445566778899AABBCCDDEEFF00000000000000000000000000000000";
         let tx = await IncomeContractFactory.connect(owner)["produceDeterministic(bytes32,address,address,uint8,uint256,uint256)"](
             salt,
-            (ETHMode) ? ZERO_ADDRESS : ERC20MintableToken.address, 
-            CommunityMockInstance.address, 
+            (ETHMode) ? ZERO_ADDRESS : ERC20MintableToken.target, 
+            CommunityMockInstance.target, 
             UBIROLE,
             UBIQuantity,
             UBIPeriod
         );
 
         let rc = await tx.wait(); // 0ms, as tx is already confirmed
-        let event = rc.events.find(event => event.event === 'InstanceCreated');
+        let event = rc.logs.find(event => event.fragment && event.fragment.name=== 'InstanceCreated');
         //let [instance,] = event.args;
         
         await expect(
             IncomeContractFactory.connect(owner)["produceDeterministic(bytes32,address,address,uint8,uint256,uint256)"](
                 salt,
-                (ETHMode) ? ZERO_ADDRESS : ERC20MintableToken.address, 
-                CommunityMockInstance.address, 
+                (ETHMode) ? ZERO_ADDRESS : ERC20MintableToken.target, 
+                CommunityMockInstance.target, 
                 UBIROLE,
                 UBIQuantity,
                 UBIPeriod
@@ -160,14 +161,14 @@ describe("IncomeContractUBILinear",  async() => {
     it(""+(trustedForwardMode ? '[trusted forwarder]' : '')+"Factory tests simple lifecycle ("+(ETHMode ? "ETH" : "ERC20")+")", async() => {
        
         let tx = await IncomeContractFactory.connect(owner)["produce(address,address,uint8,uint256,uint256)"](
-            (ETHMode) ? ZERO_ADDRESS : ERC20MintableToken.address, 
-            CommunityMockInstance.address, 
+            (ETHMode) ? ZERO_ADDRESS : ERC20MintableToken.target, 
+            CommunityMockInstance.target, 
             UBIROLE,
             UBIQuantity,
             UBIPeriod
         );
         const rc = await tx.wait(); // 0ms, as tx is already confirmed
-        const event = rc.events.find(event => event.event === 'InstanceCreated');
+        const event = rc.logs.find(event => event.fragment && event.fragment.name=== 'InstanceCreated');
         const [instance,] = event.args;
 
         IncomeContractUBILinearInstance = await ethers.getContractAt("IncomeContractUBILinear",instance);
@@ -176,18 +177,18 @@ describe("IncomeContractUBILinear",  async() => {
             await IncomeContractUBILinearInstance.connect(owner).setTrustedForwarder(trustedForwarder.address);
         }
 
-        await mixedCall(IncomeContractUBILinearInstance, trustedForwardMode, accountFive, 'addRecipient(address)', [accountOne.address], "Ownable: caller is not the owner");
-        await mixedCall(IncomeContractUBILinearInstance, trustedForwardMode, owner, 'addRecipient(address)', [accountOne.address]);
+        await mixedCall(IncomeContractUBILinearInstance, (trustedForwardMode ? trustedForwarder : trustedForwardMode), accountFive, 'addRecipient(address)', [accountOne.address], "Ownable: caller is not the owner");
+        await mixedCall(IncomeContractUBILinearInstance, (trustedForwardMode ? trustedForwarder : trustedForwardMode), owner, 'addRecipient(address)', [accountOne.address]);
 
         if (ETHMode) {
-            await owner.sendTransaction({to: IncomeContractUBILinearInstance.address, value: TEN.mul(TENIN18)});
+            await owner.sendTransaction({to: IncomeContractUBILinearInstance.target, value: TEN * (TENIN18)});
         } else {
-            await ERC20MintableToken.connect(owner).mint(IncomeContractUBILinearInstance.address, TEN.mul(TENIN18));
+            await ERC20MintableToken.connect(owner).mint(IncomeContractUBILinearInstance.target, TEN * (TENIN18));
         }
                                                                  // recipient, manager
-        await mixedCall(IncomeContractUBILinearInstance, trustedForwardMode, owner, 'addManager(address,address)', [accountOne.address, accountFive.address]);
+        await mixedCall(IncomeContractUBILinearInstance, (trustedForwardMode ? trustedForwarder : trustedForwardMode), owner, 'addManager(address,address)', [accountOne.address, accountFive.address]);
 
-        await mixedCall(IncomeContractUBILinearInstance, trustedForwardMode, accountFive, 'addManager(address,address)', [accountFourth.address, accountFive.address], "Ownable: caller is not the owner");
+        await mixedCall(IncomeContractUBILinearInstance, (trustedForwardMode ? trustedForwarder : trustedForwardMode), accountFive, 'addManager(address,address)', [accountFourth.address, accountFive.address], "Ownable: caller is not the owner");
 
         let blockNumber = await ethers.provider.getBlockNumber();
         let block = await ethers.provider.getBlock(blockNumber);
@@ -195,120 +196,118 @@ describe("IncomeContractUBILinear",  async() => {
 
         let t = [];
         t.push({
-            amount: TWO.mul(TENIN18), 
+            amount: TWO * (TENIN18), 
             untilTime: timeNow+1*60*60, 
             gradual: false, 
             fraction: FRACTION
         });
         t.push({
-            amount: TWO.mul(TENIN18), 
+            amount: TWO * (TENIN18), 
             untilTime: timeNow+2*60*60, 
             gradual: false, 
             fraction: FRACTION
         });
         t.push({
-            amount: TWO.mul(TENIN18), 
+            amount: TWO * (TENIN18), 
             untilTime: timeNow+3*60*60, 
             gradual: false, 
             fraction: FRACTION
         });
 
-        await mixedCall(IncomeContractUBILinearInstance, trustedForwardMode, owner, 'setLockup(address,(uint256,uint256,bool,uint32)[])', [accountOne.address, t]);
-        await mixedCall(IncomeContractUBILinearInstance, trustedForwardMode, accountOne, 'claim()', [], "NOTHING_AVAILABLE_TO_CLAIM");
+        await mixedCall(IncomeContractUBILinearInstance, (trustedForwardMode ? trustedForwarder : trustedForwardMode), owner, 'setLockup(address,(uint256,uint256,bool,uint32)[])', [accountOne.address, t]);
+        await mixedCall(IncomeContractUBILinearInstance, (trustedForwardMode ? trustedForwarder : trustedForwardMode), accountOne, 'claim()', [], "NOTHING_AVAILABLE_TO_CLAIM");
         
         // pass 1 hour
-        passTime(1*60*60);
+        await passTime(1*60*60);
 
         // reverts  because manager didn't pay yet
-        await mixedCall(IncomeContractUBILinearInstance, trustedForwardMode, accountOne, 'claim()', [], "NOTHING_AVAILABLE_TO_CLAIM");
-        await mixedCall(IncomeContractUBILinearInstance, trustedForwardMode, accountFive, 'pay(address,uint256)', [accountOne.address, TWO.mul(TENIN18)]);
+        await mixedCall(IncomeContractUBILinearInstance, (trustedForwardMode ? trustedForwarder : trustedForwardMode), accountOne, 'claim()', [], "NOTHING_AVAILABLE_TO_CLAIM");
+        await mixedCall(IncomeContractUBILinearInstance, (trustedForwardMode ? trustedForwarder : trustedForwardMode), accountFive, 'pay(address,uint256)', [accountOne.address, TWO * (TENIN18)]);
 
-        let balanceIncomeContractUBILinearInstanceBefore = (ETHMode) ? await ethers.provider.getBalance(IncomeContractUBILinearInstance.address) : (await ERC20MintableToken.balanceOf(IncomeContractUBILinearInstance.address));
+        let balanceIncomeContractUBILinearInstanceBefore = (ETHMode) ? await ethers.provider.getBalance(IncomeContractUBILinearInstance.target) : (await ERC20MintableToken.balanceOf(IncomeContractUBILinearInstance.target));
         let balanceAccountOneBefore = (ETHMode) ? await ethers.provider.getBalance(accountOne.address) : (await ERC20MintableToken.balanceOf(accountOne.address));
 
         // now recipient can claim
-        let claimTxObj = await mixedCall(IncomeContractUBILinearInstance, trustedForwardMode, accountOne, 'claim()', []);
+        let claimTxObj = await mixedCall(IncomeContractUBILinearInstance, (trustedForwardMode ? trustedForwarder : trustedForwardMode), accountOne, 'claim()', []);
         let claimTx = await claimTxObj.wait();
 
-        let balanceIncomeContractUBILinearInstanceAfter = (ETHMode) ? await ethers.provider.getBalance(IncomeContractUBILinearInstance.address) : (await ERC20MintableToken.balanceOf(IncomeContractUBILinearInstance.address));
+        let balanceIncomeContractUBILinearInstanceAfter = (ETHMode) ? await ethers.provider.getBalance(IncomeContractUBILinearInstance.target) : (await ERC20MintableToken.balanceOf(IncomeContractUBILinearInstance.target));
         let balanceAccountOneAfter = (ETHMode) ? await ethers.provider.getBalance(accountOne.address) : (await ERC20MintableToken.balanceOf(accountOne.address));
         
         // wrong claim
         expect(
-            balanceAccountOneBefore
-                .add(TWO.mul(TENIN18))
-                .sub(
+            balanceAccountOneBefore + (TWO * (TENIN18)) - (
                     (trustedForwardMode == false)
                     ?
                     (
                         (ETHMode) 
                         ?
-                        claimTx.cumulativeGasUsed.mul(claimTx.effectiveGasPrice)
+                        claimTx.gasUsed * (claimTx.gasPrice)
                         :
-                        0
+                        0n
                     )
                     :
                     (
-                        0
+                        0n
                     )
                 )
         ).to.be.eq(balanceAccountOneAfter);
 
         // reverts. recipient already got own 2 eth for first hour
-        await mixedCall(IncomeContractUBILinearInstance, trustedForwardMode, accountOne, 'claim()', [], "NOTHING_AVAILABLE_TO_CLAIM");
+        await mixedCall(IncomeContractUBILinearInstance, (trustedForwardMode ? trustedForwarder : trustedForwardMode), accountOne, 'claim()', [], "NOTHING_AVAILABLE_TO_CLAIM");
         
         // managers want to pay another 2 eth( for second hour) but reverts. it is not time
-        await mixedCall(IncomeContractUBILinearInstance, trustedForwardMode, accountFive, 'pay(address,uint256)', [accountOne.address, TWO.mul(TENIN18)], "AMOUNT_EXCEEDS_BALANCE");
+        await mixedCall(IncomeContractUBILinearInstance, (trustedForwardMode ? trustedForwarder : trustedForwardMode), accountFive, 'pay(address,uint256)', [accountOne.address, TWO * (TENIN18)], "AMOUNT_EXCEEDS_BALANCE");
 
         // pass another 1 hour
-        passTime(1*60*60);
+        await passTime(1*60*60);
         
         // now available to pay another 2eth
         // manager want to pay all eth (4eth). but reverts
-        await mixedCall(IncomeContractUBILinearInstance, trustedForwardMode, accountFive, 'pay(address,uint256)', [accountOne.address, FOURTH.mul(TENIN18)], "AMOUNT_EXCEEDS_BALANCE");
+        await mixedCall(IncomeContractUBILinearInstance, (trustedForwardMode ? trustedForwarder : trustedForwardMode), accountFive, 'pay(address,uint256)', [accountOne.address, FOURTH * (TENIN18)], "AMOUNT_EXCEEDS_BALANCE");
         
         // manager pay send 2 eth
-        await mixedCall(IncomeContractUBILinearInstance, trustedForwardMode, accountFive, 'pay(address,uint256)', [accountOne.address, TWO.mul(TENIN18)]);
+        await mixedCall(IncomeContractUBILinearInstance, (trustedForwardMode ? trustedForwarder : trustedForwardMode), accountFive, 'pay(address,uint256)', [accountOne.address, TWO * (TENIN18)]);
 
         // pass last 1 hour
-        passTime(1*60*60);
+        await passTime(1*60*60);
         
         // now for recipient avaialble 4 eth
         // manager want to pay 4 eth, but 2eth of them he has already payed before. so reverts
-        await mixedCall(IncomeContractUBILinearInstance, trustedForwardMode, accountFive, 'pay(address,uint256)', [accountOne.address, FOURTH.mul(TENIN18)], "AMOUNT_EXCEEDS_RATE");
+        await mixedCall(IncomeContractUBILinearInstance, (trustedForwardMode ? trustedForwarder : trustedForwardMode), accountFive, 'pay(address,uint256)', [accountOne.address, FOURTH * (TENIN18)], "AMOUNT_EXCEEDS_RATE");
         
         // so pay only 2 eth left
-        await mixedCall(IncomeContractUBILinearInstance, trustedForwardMode, accountFive, 'pay(address,uint256)', [accountOne.address, TWO.mul(TENIN18)]);
+        await mixedCall(IncomeContractUBILinearInstance, (trustedForwardMode ? trustedForwarder : trustedForwardMode), accountFive, 'pay(address,uint256)', [accountOne.address, TWO * (TENIN18)]);
         
         // recipient want to claim 4 eth
         
-        let balanceIncomeContractUBILinearInstanceBefore2 = (ETHMode) ? await ethers.provider.getBalance(IncomeContractUBILinearInstance.address) : (await ERC20MintableToken.balanceOf(IncomeContractUBILinearInstance.address));
+        let balanceIncomeContractUBILinearInstanceBefore2 = (ETHMode) ? await ethers.provider.getBalance(IncomeContractUBILinearInstance.target) : (await ERC20MintableToken.balanceOf(IncomeContractUBILinearInstance.target));
         let balanceAccountOneBefore2 = (ETHMode) ? await ethers.provider.getBalance(accountOne.address) : (await ERC20MintableToken.balanceOf(accountOne.address));
 
         // now recipient can claim
-        let claimTxObj2 = await mixedCall(IncomeContractUBILinearInstance, trustedForwardMode, accountOne, 'claim()', []);
+        let claimTxObj2 = await mixedCall(IncomeContractUBILinearInstance, (trustedForwardMode ? trustedForwarder : trustedForwardMode), accountOne, 'claim()', []);
         let claimTx2 = await claimTxObj2.wait();
 
-        let balanceIncomeContractUBILinearInstanceAfter2 = (ETHMode) ? await ethers.provider.getBalance(IncomeContractUBILinearInstance.address) : (await ERC20MintableToken.balanceOf(IncomeContractUBILinearInstance.address));
+        let balanceIncomeContractUBILinearInstanceAfter2 = (ETHMode) ? await ethers.provider.getBalance(IncomeContractUBILinearInstance.target) : (await ERC20MintableToken.balanceOf(IncomeContractUBILinearInstance.target));
         let balanceAccountOneAfter2 = (ETHMode) ? await ethers.provider.getBalance(accountOne.address) : (await ERC20MintableToken.balanceOf(accountOne.address));
 
         // wrong claim
         expect(
             balanceAccountOneBefore2
-                .add(FOURTH.mul(TENIN18))
-                .sub(
+                 + (FOURTH * (TENIN18))
+                 - (
                     (trustedForwardMode == false)
                     ?
                     (
                         (ETHMode) 
                         ?
-                        claimTx2.cumulativeGasUsed.mul(claimTx2.effectiveGasPrice)
+                        claimTx2.gasUsed * (claimTx2.gasPrice)
                         :
-                        0
+                        0n
                     )
                     :
                     (
-                        0
+                        0n
                     )
                 )
         ).to.be.eq(balanceAccountOneAfter2);
@@ -316,7 +315,7 @@ describe("IncomeContractUBILinear",  async() => {
         //'Balance at Contract wrong after claim'
         expect(
             balanceIncomeContractUBILinearInstanceBefore2
-        ).to.be.eq(balanceIncomeContractUBILinearInstanceAfter2.add(FOURTH.mul(TENIN18)));
+        ).to.be.eq(balanceIncomeContractUBILinearInstanceAfter2 + (FOURTH * (TENIN18)));
 
     });
     }
@@ -326,14 +325,14 @@ describe("IncomeContractUBILinear",  async() => {
         let avg1,avg2,avg3,tmp,tmp1,balanceAccountTwoBefore,balanceAccountTwoAfter,avgRatio,ubiVal,timePassed;
         
         let tx = await IncomeContractFactory.connect(owner)["produce(address,address,uint8,uint256,uint256)"](
-            ERC20MintableToken.address, 
-            CommunityMockInstance.address, 
+            ERC20MintableToken.target, 
+            CommunityMockInstance.target, 
             UBIROLE,
             UBIQuantity,
             UBIPeriod
         );
         const rc = await tx.wait(); // 0ms, as tx is already confirmed
-        const event = rc.events.find(event => event.event === 'InstanceCreated');
+        const event = rc.logs.find(event => event.fragment && event.fragment.name=== 'InstanceCreated');
         const [instance,] = event.args;
 
         IncomeContractUBILinearInstance = await ethers.getContractAt("IncomeContractUBILinear",instance);
@@ -342,19 +341,19 @@ describe("IncomeContractUBILinear",  async() => {
             await IncomeContractUBILinearInstance.connect(owner).setTrustedForwarder(trustedForwarder.address);
         }
 
-        await ERC20MintableToken.connect(owner).mint(IncomeContractUBILinearInstance.address, TEN.mul(TENIN18));
+        await ERC20MintableToken.connect(owner).mint(IncomeContractUBILinearInstance.target, TEN * (TENIN18));
 
         let SomeExternalContractMockFactory = await ethers.getContractFactory("SomeExternalContractMock");
 
-        var SomeExternalContractMockInstance = await SomeExternalContractMockFactory.connect(owner).deploy(IncomeContractUBILinearInstance.address);
+        var SomeExternalContractMockInstance = await SomeExternalContractMockFactory.connect(owner).deploy(IncomeContractUBILinearInstance.target);
 
         // make first actualize ubi
-        await mixedCall(IncomeContractUBILinearInstance, trustedForwardMode, accountFive, 'actualizeUBI()', []);
+        await mixedCall(IncomeContractUBILinearInstance, (trustedForwardMode ? trustedForwarder : trustedForwardMode), accountFive, 'actualizeUBI()', []);
 
         timePassed = 6*60*60 // 6 hours
-        passTime(timePassed);
+        await passTime(timePassed);
 
-        ubiVal = (BigNumber.from(timePassed).div(UBIPeriod)).mul(UBIQuantity);
+        ubiVal = (BigInt(timePassed) / (UBIPeriod)) * (UBIQuantity);
         //---------------------------------------
 
         tmp = await IncomeContractUBILinearInstance.connect(accountFive).checkUBI();
@@ -365,29 +364,29 @@ describe("IncomeContractUBILinear",  async() => {
   
 
         balanceAccountTwoBefore = await ERC20MintableToken.balanceOf(accountFive.address);
-        await mixedCall(IncomeContractUBILinearInstance, trustedForwardMode, accountFive, 'claimUBI()', [], "Sender has not in accessible List");
+        await mixedCall(IncomeContractUBILinearInstance, (trustedForwardMode ? trustedForwarder : trustedForwardMode), accountFive, 'claimUBI()', [], "Sender has not in accessible List");
 
         await CommunityMockInstance.setRoles(accountFive.address, [UBIROLE]);
-        await mixedCall(IncomeContractUBILinearInstance, trustedForwardMode, accountFive, 'claimUBI()', []);
+        await mixedCall(IncomeContractUBILinearInstance, (trustedForwardMode ? trustedForwarder : trustedForwardMode), accountFive, 'claimUBI()', []);
         balanceAccountTwoAfter = await ERC20MintableToken.balanceOf(accountFive.address);
         
         //'balance after claim UBI is not as expected'
-        expect(balanceAccountTwoAfter).to.be.eq(balanceAccountTwoBefore.add(ubiVal));
+        expect(balanceAccountTwoAfter).to.be.eq(balanceAccountTwoBefore + (ubiVal));
         
         
         tmp = await IncomeContractUBILinearInstance.connect(accountFive).checkUBI();
         //'UBI must be zero after claim'
         expect(tmp).to.be.eq(ZERO);
         
-        await mixedCall(IncomeContractUBILinearInstance, trustedForwardMode, accountFive, 'claimUBI()', [], "Amount exceeds balance available to claim");
+        await mixedCall(IncomeContractUBILinearInstance, (trustedForwardMode ? trustedForwarder : trustedForwardMode), accountFive, 'claimUBI()', [], "Amount exceeds balance available to claim");
         //---------------------------------------------------------------------------
         
         
         // pass another 3 hours
         timePassed = 3*60*60
-        passTime(timePassed);
+        await passTime(timePassed);
 
-        ubiVal = (BigNumber.from(timePassed).div(UBIPeriod)).mul(UBIQuantity);
+        ubiVal = (BigInt(timePassed) / (UBIPeriod)) * (UBIQuantity);
 
         tmp = await IncomeContractUBILinearInstance.connect(accountFive).checkUBI();
         
@@ -396,11 +395,11 @@ describe("IncomeContractUBILinear",  async() => {
 
         balanceAccountTwoBefore = await ERC20MintableToken.balanceOf(accountFive.address);
 
-        await mixedCall(IncomeContractUBILinearInstance, trustedForwardMode, accountFive, 'claimUBI()', []);
+        await mixedCall(IncomeContractUBILinearInstance, (trustedForwardMode ? trustedForwarder : trustedForwardMode), accountFive, 'claimUBI()', []);
         balanceAccountTwoAfter = await ERC20MintableToken.balanceOf(accountFive.address);
         
         //'balance after claim UBI is not as expected'
-        expect(balanceAccountTwoAfter).to.be.eq(balanceAccountTwoBefore.add(ubiVal));
+        expect(balanceAccountTwoAfter).to.be.eq(balanceAccountTwoBefore + (ubiVal));
         
         tmp = await IncomeContractUBILinearInstance.connect(accountFive).checkUBI();
         //'UBI must be zero after claim'
@@ -410,9 +409,9 @@ describe("IncomeContractUBILinear",  async() => {
         // pass another 3 hours. try to claim and should be reverted with message "NOT_ENOUGH_FUNDS"
         // 10-6-3-3=-2
         timePassed = 3*60*60
-        passTime(timePassed);
+        await passTime(timePassed);
 
-        await mixedCall(IncomeContractUBILinearInstance, trustedForwardMode, accountFive, 'claimUBI()', [], "NOT_ENOUGH_FUNDS");
+        await mixedCall(IncomeContractUBILinearInstance, (trustedForwardMode ? trustedForwarder : trustedForwardMode), accountFive, 'claimUBI()', [], "NOT_ENOUGH_FUNDS");
 
     });
 
@@ -424,13 +423,13 @@ describe("IncomeContractUBILinear",  async() => {
         beforeEach("deploying", async() => {
             let tx = await IncomeContractFactory.connect(owner)["produce(address,address,uint8,uint256,uint256)"](
                 ZERO_ADDRESS,
-                CommunityMockInstance.address, 
+                CommunityMockInstance.target, 
                 UBIROLE,
                 UBIQuantity,
                 UBIPeriod
             );
             const rc = await tx.wait(); // 0ms, as tx is already confirmed
-            const event = rc.events.find(event => event.event === 'InstanceCreated');
+            const event = rc.logs.find(event => event.fragment && event.fragment.name=== 'InstanceCreated');
             const [instance,] = event.args;
 
             IncomeContractUBILinearInstance = await ethers.getContractAt("IncomeContractUBILinear",instance);

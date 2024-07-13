@@ -77,7 +77,7 @@ async function main() {
 	// 	gasLimit: 10e6
 	// };
 
-	const deployerBalanceBefore = await deployer_auxiliary.getBalance();
+	const deployerBalanceBefore = await provider.getBalance(deployer_auxiliary.address);
     console.log("Account balance:", (deployerBalanceBefore).toString());
 
 	const IncomeContractF = await ethers.getContractFactory("IncomeContract");
@@ -88,25 +88,25 @@ async function main() {
     let implementationIncomeContractUBI         = await IncomeContractUBIF.connect(deployer_auxiliary).deploy();
 	let implementationIncomeContractUBILinear   = await IncomeContractUBILinearF.connect(deployer_auxiliary).deploy();
 	
-    await implementationIncomeContract.wait();
-    await implementationIncomeContractUBI.wait();
-    await implementationIncomeContractUBILinear.wait();
+    await implementationIncomeContract.waitForDeployment();
+    await implementationIncomeContractUBI.waitForDeployment();
+    await implementationIncomeContractUBILinear.waitForDeployment();
 
 	console.log("Implementations:");
-	console.log("  IncomeContract deployed at:          ", implementationIncomeContract.address);
-    console.log("  IncomeContractUBI deployed at:       ", implementationIncomeContractUBI.address);
-    console.log("  IncomeContractUBILinear deployed at: ", implementationIncomeContractUBILinear.address);
+	console.log("  IncomeContract deployed at:          ", implementationIncomeContract.target);
+    console.log("  IncomeContractUBI deployed at:       ", implementationIncomeContractUBI.target);
+    console.log("  IncomeContractUBILinear deployed at: ", implementationIncomeContractUBILinear.target);
     console.log("Linked with manager:");
     console.log("  Release manager:", RELEASE_MANAGER);
 
-	data_object.implementationIncomeContract 	        = implementationIncomeContract.address;
-    data_object.implementationIncomeContractUBI         = implementationIncomeContractUBI.address;
-	data_object.implementationIncomeContractUBILinear   = implementationIncomeContractUBILinear.address;
+	data_object.implementationIncomeContract 	        = implementationIncomeContract.target;
+    data_object.implementationIncomeContractUBI         = implementationIncomeContractUBI.target;
+	data_object.implementationIncomeContractUBILinear   = implementationIncomeContractUBILinear.target;
     data_object.releaseManager	        = RELEASE_MANAGER;
 
-    const deployerBalanceAfter = await deployer_auxiliary.getBalance();
-    console.log("Spent:", ethers.utils.formatEther(deployerBalanceBefore.sub(deployerBalanceAfter)));
-    console.log("gasPrice:", ethers.utils.formatUnits((await network.provider.send("eth_gasPrice")), "gwei")," gwei");
+    const deployerBalanceAfter = await provider.getBalance(deployer_auxiliary.address);
+    console.log("Spent:", ethers.formatEther(deployerBalanceBefore - deployerBalanceAfter));
+    console.log("gasPrice:", ethers.formatUnits((await network.provider.send("eth_gasPrice")), "gwei")," gwei");
 
 	//---
 	const ts_updated = Date.now();
