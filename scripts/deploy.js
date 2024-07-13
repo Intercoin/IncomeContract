@@ -88,21 +88,22 @@ async function main() {
 		options
 	]
 
-	const deployerBalanceBefore = await deployer_income.getBalance();
+	const deployerBalanceBefore = await provider.getBalance(deployer_income.address);
 	console.log("Account balance:", (deployerBalanceBefore).toString());
 
 	const IncomeContractFactoryF = await ethers.getContractFactory("IncomeContractFactory");
 
 	this.factory = await IncomeContractFactoryF.connect(deployer_income).deploy(...params);
+	this.factory.waitForDeployment();
 
-	console.log("Factory deployed at:", this.factory.address);
+	console.log("Factory deployed at:", this.factory.target);
 	console.log("with params:", [..._params]);
 
 	console.log("registered with release manager:", data_object.releaseManager);
 
 	const releaseManager = await ethers.getContractAt("ReleaseManager",data_object.releaseManager);
     let txNewRelease = await releaseManager.connect(deployer_releasemanager).newRelease(
-        [this.factory.address], 
+        [this.factory.target], 
         [
             [
                 5,//uint8 factoryIndex; 
@@ -116,12 +117,12 @@ async function main() {
     await txNewRelease.wait(3);
     console.log('newRelease - mined');
 
-	const deployerBalanceAfter = await deployer_income.getBalance();
-	console.log("Spent:", ethers.utils.formatEther(deployerBalanceBefore.sub(deployerBalanceAfter)));
-	console.log("gasPrice:", ethers.utils.formatUnits((await network.provider.send("eth_gasPrice")), "gwei")," gwei");
+	const deployerBalanceAfter = await provider.getBalance(deployer_income.address);
+	console.log("Spent:", ethers.formatEther(deployerBalanceBefore - deployerBalanceAfter));
+	console.log("gasPrice:", ethers.formatUnits((await network.provider.send("eth_gasPrice")), "gwei")," gwei");
 
 	console.log('verifying');
-    await hre.run("verify:verify", {address: this.factory.address, constructorArguments: _params});
+    await hre.run("verify:verify", {address: this.factory.target, constructorArguments: _params});
 }
 
 main()
