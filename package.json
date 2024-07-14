@@ -1,5 +1,5 @@
 {
-  "name": "incomecontract",
+  "name": "@intercoin/income",
   "version": "1.0.0",
   "description": "Implements UBI and other types of income, used to claim currency in other external contracts",
   "main": "index.js",
