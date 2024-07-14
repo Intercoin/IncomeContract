@@ -7,3 +7,4 @@ artifacts
 /cache
 coverage.json
 /coverage
+scripts/arguments.json
